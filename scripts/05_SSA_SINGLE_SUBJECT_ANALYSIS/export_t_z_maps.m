@@ -11,13 +11,16 @@
 % - ./outputs/results\<Subject>\Zmap.nii
 
 clear; clc;
+script_dir = fileparts(mfilename('fullpath'));
+addpath(script_dir);
 spm('Defaults', 'PET');
 
 %% ==== CONFIGURATION ====
 % List all groups you want to process
+cfg = ssa.default_config();
 groups_to_process = {'AD', 'MCI'};
-source_root = fullfile(pwd, 'example_data', 'pet_subjects');
-output_root = fullfile(pwd, 'outputs', 'results');
+source_root = cfg.root_dir;
+output_root = cfg.results_root;
 
 %% ==== MAIN PROCESSING LOOP ====
 for g = 1:length(groups_to_process)

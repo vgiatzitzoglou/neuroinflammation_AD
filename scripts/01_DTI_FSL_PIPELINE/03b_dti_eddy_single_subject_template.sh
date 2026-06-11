@@ -1,31 +1,32 @@
 #!/bin/bash
 
+N_THREADS="${N_THREADS:-24}"
 
-
-N_THREADS=xxxxxxxxxxx/24
-
-# Define the single subject folder you want to process
-subject_folder="xxxxxxxxxxx"
+# Usage:
+#   DTI_SUBJECT_DIR=/path/to/subject ./03b_dti_eddy_single_subject_template.sh
+# or:
+#   ./03b_dti_eddy_single_subject_template.sh /path/to/subject
+subject_folder="${1:-${DTI_SUBJECT_DIR:-}}"
 
 # Check if the C004 directory exists
-if [ ! -d "$subject_folder" ]; then
-    echo "ERROR: Subject folder $subject_folder not found. Exiting."
+if [ -z "$subject_folder" ] || [ ! -d "$subject_folder" ]; then
+    echo "ERROR: Provide a valid subject folder via argument 1 or DTI_SUBJECT_DIR."
     exit 1
 fi
 
 # --- 1. FIND MAIN DWI FILE & EXTRACT SUBJECT NAME ---
-dwi_file=$(find "$subject_folder" -maxdepth 1 -name "xxxxxxxxx???.nii.gz")
+dwi_file=$(find "$subject_folder" -maxdepth 1 -name "*.nii.gz" ! -name "*brain*" ! -name "*eddy*" -print -quit)
 
 if [ ! -f "$dwi_file" ]; then
-    echo "DWI file (xxxxxxxxxx???.nii.gz) NOT FOUND in $subject_folder. Exiting."
+    echo "DWI file not found in $subject_folder. Exiting."
     exit 1
 fi
 
-# Extract the subject name ("xxxxxxxxxx") from the DWI filename
+# Extract the subject name from the DWI filename
 subject_name=$(basename "$dwi_file" .nii.gz)
 
 # --- 2. CONSTRUCT PATHS USING THE EXACT SUBJECT NAME ---
-# This ensures we use xxxxxxxxx.bvec/bval and avoid xxxxxxxxx.bvec/bval duplicates
+# This ensures we use matching bvec/bval files and avoid duplicate prefixes.
 mask="$subject_folder/${subject_name}_brain_mask.nii.gz"
 bvec_file="$subject_folder/${subject_name}.bvec"
 bval_file="$subject_folder/${subject_name}.bval"
@@ -71,4 +72,3 @@ else
     echo "--------------------------------------------------------"
     exit 1
 fi
-

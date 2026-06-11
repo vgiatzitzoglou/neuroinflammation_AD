@@ -5,6 +5,9 @@ function run_roi_extraction()
     
     fprintf('--- Starting ROI Data Extraction ---\n');
 
+    script_dir = fileparts(mfilename('fullpath'));
+    addpath(fileparts(script_dir));
+
     % ---!!! ATLAS FILE PATH UPDATED !!!---
     % This is the correct 2mm atlas to match your processed files.
     ATLAS_FILE = fullfile(pwd, 'atlases', 'JHU-ICBM-labels-2mm.nii.gz');
@@ -13,15 +16,7 @@ function run_roi_extraction()
     baseDir = fullfile(pwd, 'example_data', 'organized_pet_dti');
     outputFile = fullfile(baseDir, 'roi_results.csv');
     
-    subjects = { ...
-        'AD014', 'AD018', 'AD023', 'AD024', 'AD027', 'AD029', 'AD030', ...
-        'AD035', 'AD036', 'AD042', 'C004', 'C008', 'C011', 'C012', ...
-        'C013', 'C018', 'C023', 'C029', 'C030', 'C035', 'C036', 'C037', ...
-        'C041', 'C41(MCI181)', 'MCI013', 'MCI024', 'MCI032', 'MCI037', ...
-        'MCI039', 'MCI040', 'MCI045', 'MCI051', 'MCI057', 'MCI059', ...
-        'MCI084', 'MCI095', 'MCI100', 'MCI104', 'MCI106', 'MCI141', ...
-        'MCI153', 'MCI156', 'MCI163' ...
-    };
+    subjects = pipeline.default_subjects();
     
     % Modalities to extract. NOTE: We use the SMOOTHED 's' files!
     % ---!!! BUG FIX: Removed extra 's' from file suffixes !!!---
@@ -146,4 +141,3 @@ function file_path = find_file_robust(searchDir, file_pattern)
         file_path = fullfile(searchDir, files(1).name);
     end
 end
-

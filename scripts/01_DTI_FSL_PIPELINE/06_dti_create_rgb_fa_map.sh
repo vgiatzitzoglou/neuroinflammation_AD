@@ -1,11 +1,13 @@
 #!/bin/bash
 
-for cif_folder in xxxxxxxxxx*/
+DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+
+for cif_folder in "$DTI_DATA_ROOT"/*/
     do
 
-    V1_file=$(find "$cif_folder" -maxdepth 1 -name "xxxxxxxx???_DTI_V1.nii.gz")
-    FA_file=$(find "$cif_folder" -maxdepth 1 -name "xxxxxxx???_DTI_FA.nii.gz")
-    cif_name=$(basename "$cif_folder")
+    V1_file=$(find "$cif_folder" -maxdepth 1 -name "*_DTI_V1.nii.gz")
+    FA_file=$(find "$cif_folder" -maxdepth 1 -name "*_DTI_FA.nii.gz")
+    cif_name=$(basename "${cif_folder%/}")
 
     if [ -f "$V1_file" ] && [ -f "$FA_file" ]
     then

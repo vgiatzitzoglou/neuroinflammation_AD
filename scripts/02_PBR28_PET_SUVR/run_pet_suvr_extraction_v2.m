@@ -6,6 +6,8 @@ function run_pet_suvr_extraction_v2()
     fprintf('--- Starting PET SUVR (JHU) ROI Extraction (v2) ---\n');
 
     % --- 1. Setup Paths and Subjects ---
+    script_dir = fileparts(mfilename('fullpath'));
+    addpath(fileparts(script_dir));
     dataDir = fullfile(pwd, 'example_data', 'pbr28');
     
     outDir = strsplit(userpath, ';');
@@ -16,14 +18,7 @@ function run_pet_suvr_extraction_v2()
     
     if ~exist(atlas_file, 'file'), fprintf('ERROR: Could not find JHU atlas file at:\n%s\n', atlas_file); return; end
     
-    subjects = { ...
-        'AD014', 'AD018', 'AD023', 'AD024', 'AD027', 'AD029', 'AD030', 'AD035', 'AD036', 'AD042', ...
-        'C004', 'C008', 'C011', 'C012', 'C013', 'C018', 'C023', 'C029', 'C030', 'C035', ...
-        'C036', 'C037', 'C041', 'C41(MCI181)', ...
-        'MCI013', 'MCI024', 'MCI032', 'MCI037', 'MCI039', 'MCI040', 'MCI045', 'MCI051', ...
-        'MCI057', 'MCI059', 'MCI084', 'MCI095', 'MCI100', 'MCI104', 'MCI106', 'MCI141', ...
-        'MCI153', 'MCI156', 'MCI163' ...
-    };
+    subjects = pipeline.default_subjects();
 
     % --- 2. Load Atlas and Prepare CSV Header ---
     fprintf('Loading atlas: %s\n', atlas_file);

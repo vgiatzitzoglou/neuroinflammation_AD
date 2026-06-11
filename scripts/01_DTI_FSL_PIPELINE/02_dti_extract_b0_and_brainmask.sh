@@ -1,8 +1,12 @@
 #!/bin/bash
 
-# Loop through all subject folders that start with xxxxxxxxx
-for subject_folder_path in 'xxxxxxxxxxx'/
+# Loop through subject folders under DTI_DATA_ROOT.
+DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+
+for subject_folder_path in "$DTI_DATA_ROOT"/*/
     do
+
+    [ ! -d "$subject_folder_path" ] && continue
 
     # Remove the trailing slash: AD014/ -> AD014
     subject_folder=${subject_folder_path%/}
@@ -34,4 +38,3 @@ for subject_folder_path in 'xxxxxxxxxxx'/
     fi
 
 done
-

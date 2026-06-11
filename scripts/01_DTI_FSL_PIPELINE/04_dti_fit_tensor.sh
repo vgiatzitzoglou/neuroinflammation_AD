@@ -1,13 +1,15 @@
 #!/bin/bash
 
-for cif_folder in xxxxx*/
+DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+
+for cif_folder in "$DTI_DATA_ROOT"/*/
     do
 
     mask=$(find "$cif_folder" -maxdepth 1 -name "*_brain_mask.nii.gz")
-    eddy_unwarped=$(find "$cif_folder" -maxdepth 1 -name "C*_eddy_unwarped.nii.gz")
+    eddy_unwarped=$(find "$cif_folder" -maxdepth 1 -name "*_eddy_unwarped.nii.gz")
     bvec_file=$(find "$cif_folder" -maxdepth 1 -name "*.bvec")
     bval_file=$(find "$cif_folder" -maxdepth 1 -name "*.bval")
-    cif_name=$(basename "$cif_folder")
+    cif_name=$(basename "${cif_folder%/}")
 
     if [ -f "$mask" ] && [ -f "$eddy_unwarped" ] && [ -f "$bvec_file" ] && [ -f "$bval_file" ]
     then

@@ -2,6 +2,7 @@
 
 # --- CONFIGURATION ---
 MAIN_DIR="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+SUBJECT_PATTERN="${DTI_SUBJECT_PATTERN:-*}"
 
 EDDY_EXECUTABLE="eddy_cuda11.0"
 if ! command -v "$EDDY_EXECUTABLE" &> /dev/null
@@ -11,8 +12,9 @@ then
 fi
 # ---------------------
 
-for subject_folder in "$MAIN_DIR"/MCI*
+for subject_folder in "$MAIN_DIR"/$SUBJECT_PATTERN
 do
+    [ ! -d "$subject_folder" ] && continue
     subject_name=$(basename "$subject_folder")
 
     echo "--- Starting $subject_name (GPU) ---"
@@ -67,4 +69,3 @@ do
 done
 
 echo "--- GPU Batch Processing Complete ---"
-

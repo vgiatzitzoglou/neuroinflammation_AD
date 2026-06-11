@@ -7,6 +7,8 @@ function run_acpc_realignment()
     fprintf('--- Starting Automatic AC-PC Realignment ---\n');
 
     % --- 1. Setup Paths and Subjects ---
+    script_dir = fileparts(mfilename('fullpath'));
+    addpath(fileparts(script_dir));
 
     % --- FIX: Changed dataDir to Windows-style path ---
     dataDir = fullfile(pwd, 'example_data', 'pbr28');
@@ -31,16 +33,7 @@ function run_acpc_realignment()
     end
     fprintf('Found MNI Template: %s\n', template_file);
 
-    % This is your final, 43-subject list
-    subjects = { ...
-        'AD014', 'AD018', 'AD023', 'AD024', 'AD027', 'AD029', 'AD030', 'AD035', 'AD036', 'AD042', ...
-        'C004', 'C008', 'C011', 'C012', 'C013', 'C018', 'C023', 'C029', 'C030', 'C035', ...
-        'C036', 'C037', 'C041', ...
-        'C41(MCI181)', ...
-        'MCI013', 'MCI024', 'MCI032', 'MCI037', 'MCI039', 'MCI040', 'MCI045', 'MCI051', ...
-        'MCI057', 'MCI059', 'MCI084', 'MCI095', 'MCI100', 'MCI104', 'MCI106', 'MCI141', ...
-        'MCI153', 'MCI156', 'MCI163' ...
-    };
+    subjects = pipeline.default_subjects();
 
     fprintf('Found %d subjects to process...\n', numel(subjects));
 

@@ -4,6 +4,9 @@ function run_processing_batch()
     % normalization, and creates a subject-specific SUVR map in MNI space.
 
     % --- Configuration ---
+    script_dir = fileparts(mfilename('fullpath'));
+    addpath(fileparts(script_dir));
+
     % Base directory where 'organized_pet_dti' is located
     baseDir = pwd; 
     dataDir = fullfile(baseDir, 'organized_pet_dti');
@@ -16,15 +19,7 @@ function run_processing_batch()
         error('SPM atlas ''labels_Neuromorphometrics.nii'' not found in %s. Please check SPM installation.', fullfile(spm_dir, 'tpm'));
     end
     
-    % --- Subject List (43 subjects) ---
-    subjects = { ...
-        'AD014', 'AD018', 'AD023', 'AD024', 'AD027', 'AD029', 'AD030', 'AD035', ...
-        'AD036', 'AD042', 'C004', 'C008', 'C011', 'C012', 'C013', 'C018', ...
-        'C023', 'C029', 'C030', 'C035', 'C036', 'C037', 'C041', 'C41(MCI181)', ...
-        'MCI013', 'MCI024', 'MCI032', 'MCI037', 'MCI039', 'MCI040', 'MCI045', ...
-        'MCI051', 'MCI057', 'MCI059', 'MCI084', 'MCI095', 'MCI100', 'MCI104', ...
-        'MCI106', 'MCI141', 'MCI153', 'MCI156', 'MCI163' ...
-    };
+    subjects = pipeline.default_subjects();
 
     fprintf('--- Starting processing batch (v4) for %d subjects ---\n', numel(subjects));
     spm('defaults', 'PET');
@@ -270,4 +265,3 @@ function out_file = gzip_if_needed(file_path, force_gzip)
         out_file = file_path;
     end
 end
-

@@ -6,11 +6,14 @@
 % (Voxel Intensity = Number of subjects with a significant cluster at that spot)
 
 clear; clc;
+script_dir = fileparts(mfilename('fullpath'));
+addpath(script_dir);
 spm('Defaults', 'PET');
 
 %% ==== CONFIGURATION ====
+cfg = ssa.default_config();
 target_group = 'MCI';  % Change to 'MCI' for the other group
-results_root = fullfile(pwd, 'outputs', 'results');
+results_root = cfg.results_root;
 output_filename = fullfile(results_root, [target_group '_Frequency_Map.nii']);
 
 %% ==== MAIN PROCESSING ====

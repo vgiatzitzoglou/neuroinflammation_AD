@@ -2,6 +2,10 @@
 
 This folder is organised by pipeline purpose. Files were moved, not deleted. Older versions and exact duplicates are preserved under `99_ARCHIVE_REDUNDANT_OR_OLD_VERSIONS`.
 
+## Shared Helpers
+
+- `+pipeline/default_subjects.m`: shared example subject-label list used by PET, VBM, multimodal, and QC MATLAB batch scripts.
+
 ## 01_DTI_FSL_PIPELINE
 
 DTI shell/FSL processing scripts:
@@ -58,14 +62,14 @@ SPM/VBM/multimodal preprocessing scripts:
 
 Single-subject analysis and SPM cluster scripts:
 
-- `masterSSA.m`: main SSA pipeline for AD/MCI/HC specificity check.
-- `ssa_batch.m`: core SSA function.
-- `run_ssa_all.m`, `run_ssa_batch.m`, `run_ssa_missing.m`: SSA wrappers.
-- `batch_create_spm_models.m`: create SPM single-subject models.
+- `run_ssa_pipeline.m`: main SSA pipeline for selecting normative controls, building SPM models, and writing cluster maps.
+- `ssa_batch.m`: reusable cluster extraction and PET-summary function for existing `SPM.mat` files.
+- `run_ssa_all.m`: wrapper for running `ssa_batch` from a prepared subject table.
+- `run_ssa_missing.m`: scans for existing `SPM.mat` files that do not yet have SSA outputs.
 - `create_frequency_map.m`: disease frequency map.
 - `export_t_z_maps.m`: export T and Z maps.
-- `ssa_master_specificity_remaining_controls.m`: old `master.m` renamed descriptively.
-- `ssa_master_ad_mci_full_pipeline_fixed_scaling.m`: old `runADleft.m` renamed descriptively.
+- `+ssa/`: shared helper functions used by the active SSA scripts.
+- `99_ARCHIVE_REDUNDANT_OR_OLD_VERSIONS/`: older SSA master variants kept for reference.
 
 ## 06_QC_AND_HELPERS
 
