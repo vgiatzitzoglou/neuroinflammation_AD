@@ -46,3 +46,4 @@ PET_T1_SOURCE_DIR=/path/to/pet_t1 DTI_SOURCE_DIR=/path/to/dti ./scripts/04_MULTI
 Keep this repository code-only. Do not commit raw images, derived images, spreadsheets, subject-level tables, logs, or generated outputs.
 
 The `.gitignore` blocks common neuroimaging and analysis output formats to reduce accidental commits.
+
