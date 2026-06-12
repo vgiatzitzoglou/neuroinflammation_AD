@@ -57,7 +57,7 @@ function cleanup()
     % Delete the shared cerebellum mask
     delete(fullfile(dataDir, 'mni_cerebellum_mask.nii*'));
     
-    fprintf('\n--- CLEANUP COMPLETE ---\n');
+    fprintf('\n--- cleanup done ---\n');
     fprintf('You are now ready to run the main processing batch.\n');
 
 end

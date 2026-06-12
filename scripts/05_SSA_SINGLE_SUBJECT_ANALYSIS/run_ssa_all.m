@@ -1,6 +1,7 @@
-%% RUN SSA FROM A SUBJECT TABLE
-% Wrapper for users who already have a CSV/TSV with:
+%% run SSA from a subject table
+% Use this if I already have a CSV/TSV with:
 % id, spm_mat, pet_img, optional mask_img, threshold, extent, contrast_index.
+% TODO: check the table columns before running, MATLAB errors here are annoying.
 
 clear; clc;
 

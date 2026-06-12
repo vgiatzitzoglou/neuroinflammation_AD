@@ -143,7 +143,7 @@ else
     fprintf('No subjects were successfully processed.\n');
 end
 
-fprintf('\n=== Processing complete! ===\n');
+fprintf('\n=== done ===\n');
 fprintf('Total subjects processed: %d/%d\n', subject_count, length(subject_dirs));
 
 end

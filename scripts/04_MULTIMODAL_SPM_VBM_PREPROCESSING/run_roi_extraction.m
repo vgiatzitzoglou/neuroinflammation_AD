@@ -126,7 +126,7 @@ function run_roi_extraction()
     end
     
     fclose(fid);
-    fprintf('--- Data extraction complete! ---\n');
+    fprintf('--- data extraction done ---\n');
     fprintf('Results saved to: %s\n', outputFile);
 
 end % End of main function

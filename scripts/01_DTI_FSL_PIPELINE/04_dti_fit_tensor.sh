@@ -14,12 +14,12 @@ for cif_folder in "$DTI_DATA_ROOT"/*/
     if [ -f "$mask" ] && [ -f "$eddy_unwarped" ] && [ -f "$bvec_file" ] && [ -f "$bval_file" ]
     then
     
-    echo "$eddy_unwarped FOUND"
+    echo "$eddy_unwarped found"
     dtifit --data="$eddy_unwarped" --mask="$mask" --bvecs="$bvec_file" --bvals="$bval_file" --out="$cif_folder/${cif_name}_DTI"
 
     else
 
-    echo "One or more files NOT FOUND and dtifit INCOMPLETE for $cif_folder"
+    echo "missing file(s), dtifit not run for $cif_folder"
     fi
 
 done

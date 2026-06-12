@@ -1,6 +1,6 @@
-% PBR28 SUVR EXTRACTION PIPELINE - COMPLETE VERSION
-% Extracts individual ROIs + grouped tracts/lobes
-% 4-sheet Excel output with processing log
+% PBR28 SUVR extraction
+% Extracts individual ROIs and grouped tracts/lobes.
+% This one got used for the larger WM/GM table. Check paths first.
 
 %% ========================================================================
 %  CONFIGURATION
@@ -16,6 +16,7 @@ output_file = fullfile(pwd, 'outputs', 'PBR28_SUVR_WM_GM_Analysis.xlsx');
 log_file = fullfile(pwd, 'outputs', 'PBR28_Processing_Log.txt');
 
 % Image patterns (try multiple formats)
+% TODO: if file names change, add the new pattern here rather than editing below.
 image_patterns = {
     'Nor_Cor_*_Realign_PBR28_6090_add_cereb.nii',  % Standard SUVR format
     'Nor_Cor_*_Realign_PBR28_6090_add_cereb.img',  % Analyze format with cereb
@@ -24,7 +25,7 @@ image_patterns = {
 };
 
 fprintf('=================================================================\n');
-fprintf('PBR28 SUVR EXTRACTION PIPELINE - COMPLETE\n');
+fprintf('PBR28 SUVR extraction\n');
 fprintf('=================================================================\n');
 fprintf('Input:  %s\n', pbr28_root);
 fprintf('Output: %s\n', output_file);
@@ -46,7 +47,7 @@ if ~exist(out_dir, 'dir')
     mkdir(out_dir);
 end
 
-fprintf('  ✓ All paths validated\n\n');
+fprintf('  paths seem ok\n\n');
 
 %% ========================================================================
 %  DEFINE TRACT GROUPINGS
@@ -58,7 +59,7 @@ fprintf('Defining tract groupings...\n');
 % ROI 1 = Unclassified (background/CSF)
 % ROI 2-49 = 48 labeled white matter tracts
 
-% Define bilateral tract pairs (your specified list)
+% Bilateral tract pairs used in my table
 % Format: {Name, ROI_L, ROI_R}
 bilateral_tracts = {
     'ATR',                           24, 25;  % Anterior thalamic radiation
@@ -78,10 +79,11 @@ midline_tracts = {
     'Forceps_minor',    4    % Genu of corpus callosum
 };
 
-fprintf('  ✓ Defined 9 bilateral tracts\n');
-fprintf('  ✓ Defined 2 midline tracts\n');
+fprintf('  ok Defined 9 bilateral tracts\n');
+fprintf('  ok Defined 2 midline tracts\n');
 
 % Hammers GM lobe groupings (same as before)
+% TODO: double check labels if switching atlas version.
 hammers_lobes = struct();
 hammers_lobes.Frontal = [23, 24, 25, 26, 27, 28, 29, 41, 42, 43, 44, 69, 70, 71, 72];
 hammers_lobes.Temporal = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 30, 31, 53, 54, 55, 56];
@@ -90,7 +92,7 @@ hammers_lobes.Occipital = [15, 16, 36, 37];
 hammers_lobes.Cingulate = [38, 39, 40];
 hammers_lobes.Subcortical = [1, 2, 20, 21, 22, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68];
 
-fprintf('  ✓ Defined 6 GM lobes\n\n');
+fprintf('  ok Defined 6 GM lobes\n\n');
 
 %% ========================================================================
 %  FIND ALL SUBJECTS
@@ -136,7 +138,7 @@ for i = 1:length(subj_dirs)
     end
     
     if length(img_files) > 1
-        fprintf('  ⚠ Multiple images for %s, using: %s\n', subj_name, img_files(1).name);
+        fprintf('  warning: Multiple images for %s, using: %s\n', subj_name, img_files(1).name);
     end
     
     img_path = fullfile(subj_path, img_files(1).name);
@@ -166,7 +168,7 @@ fprintf('    MCI: %d\n', sum(strcmp(groups, 'MCI')));
 fprintf('    HC:  %d\n', sum(strcmp(groups, 'HC')));
 
 if n_skipped > 0
-    fprintf('  ⚠ Skipped %d subjects (see log file)\n', n_skipped);
+    fprintf('  warning: Skipped %d subjects (see log file)\n', n_skipped);
 end
 fprintf('\n');
 
@@ -182,11 +184,11 @@ fprintf('Loading atlases...\n');
 
 V_jhu = spm_vol(jhu_atlas);
 jhu_img = spm_read_vols(V_jhu);
-fprintf('  ✓ JHU atlas: %dx%dx%d\n', size(jhu_img, 1), size(jhu_img, 2), size(jhu_img, 3));
+fprintf('  ok JHU atlas: %dx%dx%d\n', size(jhu_img, 1), size(jhu_img, 2), size(jhu_img, 3));
 
 V_hammers = spm_vol(hammers_atlas);
 hammers_img = spm_read_vols(V_hammers);
-fprintf('  ✓ Hammers atlas: %dx%dx%d\n\n', size(hammers_img, 1), size(hammers_img, 2), size(hammers_img, 3));
+fprintf('  ok Hammers atlas: %dx%dx%d\n\n', size(hammers_img, 1), size(hammers_img, 2), size(hammers_img, 3));
 
 %% ========================================================================
 %  EXTRACT VALUES
@@ -248,15 +250,15 @@ for subj_idx = 1:n_subjects
         wm_valid = sum(~isnan(wm_individual(subj_idx, :)));
         gm_valid = sum(~isnan(gm_individual(subj_idx, :)));
         
-        fprintf('  ✓ WM ROIs: %d/49 valid\n', wm_valid);
-        fprintf('  ✓ GM ROIs: %d/84 valid\n', gm_valid);
+        fprintf('  ok WM ROIs: %d/49 valid\n', wm_valid);
+        fprintf('  ok GM ROIs: %d/84 valid\n', gm_valid);
         
         if wm_valid < 40 || gm_valid < 70
-            fprintf('  ⚠ WARNING: Low ROI coverage\n');
+            fprintf('  warning: Low ROI coverage\n');
         end
         
     catch ME
-        fprintf('  ✗ ERROR: %s\n', ME.message);
+        fprintf('  error: %s\n', ME.message);
         failed_subjects{end+1} = subjects{subj_idx}; %#ok<AGROW>
         fail_reasons{end+1} = ME.message; %#ok<AGROW>
     end
@@ -288,8 +290,8 @@ for i = 1:length(midline_tracts)
     wm_tracts(:, n_bilateral + i) = wm_individual(:, roi);
 end
 
-fprintf('  ✓ Calculated %d bilateral tracts\n', n_bilateral);
-fprintf('  ✓ Calculated %d midline tracts\n', length(midline_tracts));
+fprintf('  ok Calculated %d bilateral tracts\n', n_bilateral);
+fprintf('  ok Calculated %d midline tracts\n', length(midline_tracts));
 
 % GM lobes
 lobe_names = fieldnames(hammers_lobes);
@@ -303,7 +305,7 @@ for lobe_idx = 1:length(lobe_names)
     gm_lobes(:, lobe_idx) = nanmean(gm_individual(:, lobe_rois), 2);
 end
 
-fprintf('  ✓ Calculated %d GM lobes\n\n', length(lobe_names));
+fprintf('  ok Calculated %d GM lobes\n\n', length(lobe_names));
 
 %% ========================================================================
 %  CREATE OUTPUT TABLES (4 SHEETS)
@@ -324,7 +326,7 @@ for roi = 1:49
     wm_ind_table.(col_name) = wm_individual(:, roi);
 end
 
-fprintf('  ✓ Sheet 1: WM_Individual_ROIs (%d subjects, 49 ROIs)\n', height(wm_ind_table));
+fprintf('  ok Sheet 1: WM_Individual_ROIs (%d subjects, 49 ROIs)\n', height(wm_ind_table));
 
 % =========================================================================
 % SHEET 2: WM Tracts (11 columns: 9 bilateral + 2 midline)
@@ -346,7 +348,7 @@ for i = 1:length(midline_tracts)
     wm_tract_table.(tract_name) = wm_tracts(:, n_bilateral + i);
 end
 
-fprintf('  ✓ Sheet 2: WM_Tracts (%d subjects, 11 tracts)\n', height(wm_tract_table));
+fprintf('  ok Sheet 2: WM_Tracts (%d subjects, 11 tracts)\n', height(wm_tract_table));
 
 % =========================================================================
 % SHEET 3: GM Individual ROIs (84 columns)
@@ -361,7 +363,7 @@ for roi = 1:84
     gm_ind_table.(col_name) = gm_individual(:, roi);
 end
 
-fprintf('  ✓ Sheet 3: GM_Individual_ROIs (%d subjects, 84 ROIs)\n', height(gm_ind_table));
+fprintf('  ok Sheet 3: GM_Individual_ROIs (%d subjects, 84 ROIs)\n', height(gm_ind_table));
 
 % =========================================================================
 % SHEET 4: GM Lobes (6 columns)
@@ -376,7 +378,7 @@ for lobe_idx = 1:length(lobe_names)
     gm_lobe_table.(lobe_name) = gm_lobes(:, lobe_idx);
 end
 
-fprintf('  ✓ Sheet 4: GM_Lobes (%d subjects, 6 lobes)\n\n', height(gm_lobe_table));
+fprintf('  ok Sheet 4: GM_Lobes (%d subjects, 6 lobes)\n\n', height(gm_lobe_table));
 
 %% ========================================================================
 %  EXPORT TO EXCEL
@@ -393,7 +395,7 @@ writetable(wm_tract_table, output_file, 'Sheet', '2_WM_Tracts');
 writetable(gm_ind_table, output_file, 'Sheet', '3_GM_Individual_ROIs');
 writetable(gm_lobe_table, output_file, 'Sheet', '4_GM_Lobes');
 
-fprintf('  ✓ Saved: %s\n\n', output_file);
+fprintf('  ok Saved: %s\n\n', output_file);
 
 %% ========================================================================
 %  WRITE PROCESSING LOG
@@ -450,7 +452,7 @@ end
 
 fclose(fid);
 
-fprintf('  ✓ Log saved: %s\n\n', log_file);
+fprintf('  ok Log saved: %s\n\n', log_file);
 
 %% ========================================================================
 %  SUMMARY STATISTICS
@@ -472,7 +474,7 @@ for g = {'AD', 'MCI', 'HC'}
     mean_suvr = nanmean(wm_tracts(group_idx, :), 'all');
     std_suvr = nanstd(wm_tracts(group_idx, :), 0, 'all');
     
-    fprintf('  %s (N=%d): %.3f ± %.3f\n', group_name, n_group, mean_suvr, std_suvr);
+    fprintf('  %s (N=%d): %.3f +/- %.3f\n', group_name, n_group, mean_suvr, std_suvr);
 end
 
 fprintf('\nGRAY MATTER LOBES (mean SUVR):\n');
@@ -487,11 +489,11 @@ for g = {'AD', 'MCI', 'HC'}
     mean_suvr = nanmean(gm_lobes(group_idx, :), 'all');
     std_suvr = nanstd(gm_lobes(group_idx, :), 0, 'all');
     
-    fprintf('  %s (N=%d): %.3f ± %.3f\n', group_name, n_group, mean_suvr, std_suvr);
+    fprintf('  %s (N=%d): %.3f +/- %.3f\n', group_name, n_group, mean_suvr, std_suvr);
 end
 
 fprintf('\n=================================================================\n');
-fprintf('EXTRACTION COMPLETE\n');
+fprintf('done\n');
 fprintf('=================================================================\n');
 fprintf('Excel output: %s\n', output_file);
 fprintf('Processing log: %s\n', log_file);

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# --- CONFIGURATION ---
+# config
 MAIN_DIR="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
 SUBJECT_PATTERN="${DTI_SUBJECT_PATTERN:-*}"
 
@@ -17,9 +17,9 @@ do
     [ ! -d "$subject_folder" ] && continue
     subject_name=$(basename "$subject_folder")
 
-    echo "--- Starting $subject_name (GPU) ---"
+    echo "starting $subject_name (GPU)"
 
-    # --- 1. FIND ALL REQUIRED INPUT FILES (inside the subject folder) ---
+    # required files inside the subject folder
     dwi_file="$subject_folder/${subject_name}.nii.gz"
     mask="$subject_folder/${subject_name}_brain_mask.nii.gz"
     bvec_file="$subject_folder/${subject_name}.bvec"
@@ -30,17 +30,17 @@ do
     eddy_output="$subject_folder/${subject_name}_eddy_unwarped.nii.gz"
 
 
-    # --- 2. CHECK FOR COMPLETION ---
+    # skip if already done
     if [ -f "$eddy_output" ]; then
         echo "  - Output already exists, skipping."
         continue
     fi
 
-    # --- 3. CHECK ALL INPUT FILES EXIST ---
+    # check inputs
     if [ -f "$dwi_file" ] && [ -f "$mask" ] && [ -f "$bvec_file" ] && [ -f "$bval_file" ] && [ -f "$acqparams_file" ] && [ -f "$index_file" ]
     then
 
-        # --- 4. EXECUTE EDDY (GPU ACCELERATED) ---
+        # run eddy
         "$EDDY_EXECUTABLE" diffusion \
                            --imain="$dwi_file" \
                            --mask="$mask" \
@@ -53,10 +53,10 @@ do
                            --data_is_shelled \
                            --fwhm=0
 
-      echo "GPU_BATCH_COMPLETED_FOR_SUBJECT: $subject_name"
+      echo "done with $subject_name"
 
     else
-        # --- 5. DETAILED ERROR LOGGING ---
+        # enough detail to see what is missing
         echo "  - ERROR: Missing required file(s) for $subject_name. Skipping."
         [ ! -f "$dwi_file" ] && echo "    - MISSING: DWI File ($dwi_file)"
         [ ! -f "$mask" ] && echo "    - MISSING: Brain Mask ($mask)"
@@ -68,4 +68,4 @@ do
 
 done
 
-echo "--- GPU Batch Processing Complete ---"
+echo "gpu batch done"

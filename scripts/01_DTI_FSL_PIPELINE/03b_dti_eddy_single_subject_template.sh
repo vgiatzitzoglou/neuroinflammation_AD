@@ -8,13 +8,13 @@ N_THREADS="${N_THREADS:-24}"
 #   ./03b_dti_eddy_single_subject_template.sh /path/to/subject
 subject_folder="${1:-${DTI_SUBJECT_DIR:-}}"
 
-# Check if the C004 directory exists
+# subject folder, either as argument or env var
 if [ -z "$subject_folder" ] || [ ! -d "$subject_folder" ]; then
     echo "ERROR: Provide a valid subject folder via argument 1 or DTI_SUBJECT_DIR."
     exit 1
 fi
 
-# --- 1. FIND MAIN DWI FILE & EXTRACT SUBJECT NAME ---
+# find main DWI file and subject name
 dwi_file=$(find "$subject_folder" -maxdepth 1 -name "*.nii.gz" ! -name "*brain*" ! -name "*eddy*" -print -quit)
 
 if [ ! -f "$dwi_file" ]; then
@@ -22,11 +22,10 @@ if [ ! -f "$dwi_file" ]; then
     exit 1
 fi
 
-# Extract the subject name from the DWI filename
+# subject name from the DWI filename
 subject_name=$(basename "$dwi_file" .nii.gz)
 
-# --- 2. CONSTRUCT PATHS USING THE EXACT SUBJECT NAME ---
-# This ensures we use matching bvec/bval files and avoid duplicate prefixes.
+# use exact subject name so bvec/bval names match
 mask="$subject_folder/${subject_name}_brain_mask.nii.gz"
 bvec_file="$subject_folder/${subject_name}.bvec"
 bval_file="$subject_folder/${subject_name}.bval"
@@ -35,14 +34,14 @@ index_file="$subject_folder/index.txt"
 eddy_output="$subject_folder/${subject_name}_eddy_unwarped.nii.gz"
 
 
-# --- 3. CHECK FOR COMPLETION ---
+# skip if already done
 if [ -f "$eddy_output" ]
 then
     echo "${eddy_output} already exists, skipping ..."
     exit 0
 fi
 
-# --- 4. CHECK ALL INPUT FILES EXIST ---
+# check all input files exist
 if [ -f "$mask" ] && \
    [ -f "$bvec_file" ] && \
    [ -f "$bval_file" ] && \
@@ -50,7 +49,7 @@ if [ -f "$mask" ] && \
    [ -f "$index_file" ]
 then
     
-    # --- 5. EXECUTE EDDY with adjusted core count ---
+    # run eddy with adjusted core count
     eddy_cpu diffusion --imain="$dwi_file" \
                        --mask="$mask" \
                        --index="$index_file" \
@@ -63,12 +62,12 @@ then
                        --data_is_shelled \
                        --fwhm=0
                        
-    echo "MASK FOUND and Eddy DONE for $subject_folder"
+    echo "eddy done for $subject_folder"
     
 else
     echo "--------------------------------------------------------"
-    echo "ERROR: Missing files for $subject_folder. Eddy INCOMPLETE."
-    # Detailed error check is omitted here for brevity, but recommended
+    echo "ERROR: Missing files for $subject_folder. Eddy not run."
+    # TODO: add detailed missing-file printout if this becomes annoying.
     echo "--------------------------------------------------------"
     exit 1
 fi

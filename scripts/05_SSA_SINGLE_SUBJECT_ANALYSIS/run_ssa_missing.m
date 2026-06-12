@@ -1,6 +1,7 @@
-%% RUN SSA FOR SUBJECTS MISSING OUTPUTS
+%% run SSA for subjects missing outputs
 % Scans ./example_data/pet_subjects and calls ssa_batch only where
 % SPM.mat exists but cluster/result outputs are missing.
+% Useful after a half-finished SSA run.
 
 clear; clc;
 

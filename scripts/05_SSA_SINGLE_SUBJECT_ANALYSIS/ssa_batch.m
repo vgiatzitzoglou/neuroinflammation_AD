@@ -1,13 +1,16 @@
 function ssa_batch(subjects, out_root)
-%SSA_BATCH Extract SSA clusters and PET summaries for a subject list.
+%SSA_BATCH Run cluster extraction/PET summaries for a subject list.
 %
 % subjects can be:
 % - a cell array of structs with id, spm_mat, pet_img, optional mask_img
 % - a CSV/TSV path with columns id, spm_mat, pet_img, optional mask_img
 %
-% Outputs per subject:
+% outputs per subject:
 % - Clusters.nii
 % - Results.tsv
+%
+% NOTE: this expects SPM.mat to already exist. It is mostly a convenience
+% wrapper so I do not keep copying the same cluster code.
 
 if nargin == 0
     fprintf(['Usage:\n', ...

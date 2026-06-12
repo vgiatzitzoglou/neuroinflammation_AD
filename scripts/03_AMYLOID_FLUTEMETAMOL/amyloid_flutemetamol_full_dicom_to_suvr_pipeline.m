@@ -1,9 +1,9 @@
-% COMPLETE FLUTEMETAMOL AMYLOID SUVR PIPELINE - CUSTOMIZED FOR YOUR DATA
-% From DICOM → Excel with SUVR quantification and amyloid classification
-% Customized: 1mm MNI, tight bbox, whole cerebellum ref, cutoff 1.38, QC images
+% Flutemetamol amyloid SUVR script
+% DICOM -> SUVR values/table. This is still quite path-dependent, so check the
+% folders and atlas before running.
 
 %% ========================================================================
-%  CONFIGURATION - CUSTOMIZED FOR YOUR DATA
+%  CONFIGURATION
 %  ========================================================================
 
 % Input paths
@@ -26,6 +26,7 @@ cortical_rois = [1:16, 20:44, 53:76];  % All gray matter cortical regions
 
 % Amyloid positivity cutoff (Park et al. 2025)
 amyloid_cutoff = 1.38;  % Whole cerebellum reference
+% TODO: change this if using a different reference region / paper.
 
 % MNI normalization parameters
 voxel_size = [1 1 1];  % 1mm isotropic (high resolution)
@@ -50,7 +51,7 @@ scan_patterns = {
 };
 
 fprintf('=================================================================\n');
-fprintf('FLUTEMETAMOL AMYLOID SUVR PIPELINE - CUSTOMIZED\n');
+fprintf('FLUTEMETAMOL AMYLOID SUVR\n');
 fprintf('=================================================================\n');
 fprintf('Configuration:\n');
 fprintf('  Atlas:           Hammers (84 ROIs)\n');
@@ -76,14 +77,14 @@ assert(exist(atlas_path, 'file') ~= 0, 'Atlas not found: %s', atlas_path);
 if isempty(which('spm'))
     error('SPM12 not found in MATLAB path. Please add SPM12.');
 end
-fprintf('  ✓ SPM12 found\n');
+fprintf('  ok SPM12 found\n');
 
 % Check dcm2niix
 [status, ~] = system('which dcm2niix');
 if status ~= 0
     warning('dcm2niix not in PATH. DICOM conversion will fail.');
 else
-    fprintf('  ✓ dcm2niix found\n');
+    fprintf('  ok dcm2niix found\n');
 end
 
 % Create output directory structure
@@ -96,7 +97,7 @@ if save_qc_images && ~exist(qc_dir, 'dir')
     mkdir(qc_dir);
 end
 
-fprintf('  ✓ Output directories created\n\n');
+fprintf('  ok Output directories created\n\n');
 
 %% ========================================================================
 %  LOAD SUBJECT IDS FROM EXCEL
@@ -205,14 +206,14 @@ for i = 1:numel(norm_ids)
             % Convert DICOM
             [ok, msg] = run_dcm2niix(dicom_dir, out_dir);
             if ~ok
-                fprintf('  ✗ Conversion failed: %s\n', msg);
+                fprintf('  error: Conversion failed: %s\n', msg);
                 continue;
             end
             
             % Average 4D frames
             mean_pet = average_4d_frames(out_dir, nid);
             if ~isempty(mean_pet)
-                fprintf('  ✓ Mean PET: %s\n', mean_pet);
+                fprintf('  ok Mean PET: %s\n', mean_pet);
                 break;
             end
         end
@@ -232,14 +233,14 @@ for i = 1:numel(norm_ids)
             error('No T1 MRI found');
         end
         
-        fprintf('  ✓ T1: %s\n', t1_file);
+        fprintf('  ok T1: %s\n', t1_file);
         result.T1_file = t1_file;
         
         %% STEP 3: Coregister PET to T1
         fprintf('STEP 3: Coregistration\n');
         
         coreg_pet = coregister_pet_to_t1(mean_pet, t1_file);
-        fprintf('  ✓ Coregistered: %s\n', coreg_pet);
+        fprintf('  ok Coregistered: %s\n', coreg_pet);
         
         % QC: Save coregistration check
         if save_qc_images
@@ -250,7 +251,7 @@ for i = 1:numel(norm_ids)
         fprintf('STEP 4: Spatial Normalization\n');
         
         [norm_t1, norm_pet, def_field] = normalize_to_mni(t1_file, coreg_pet, voxel_size, bounding_box);
-        fprintf('  ✓ Normalized PET: %s\n', norm_pet);
+        fprintf('  ok Normalized PET: %s\n', norm_pet);
         
         % QC: Save normalization check
         if save_qc_images
@@ -265,11 +266,11 @@ for i = 1:numel(norm_ids)
         
         [suvr_file, cereb_mean] = calculate_suvr_whole_cerebellum(norm_pet, atlas_path, ...
                                                                    cerebellum_rois, out_root, nid);
-        fprintf('  ✓ SUVR image: %s\n', suvr_file);
-        fprintf('  ✓ Cerebellum mean: %.4f\n', cereb_mean);
+        fprintf('  ok SUVR image: %s\n', suvr_file);
+        fprintf('  ok Cerebellum mean: %.4f\n', cereb_mean);
         
         if abs(cereb_mean - 1.0) > 0.1
-            fprintf('  ⚠ WARNING: Cerebellum mean should be ~1.0, got %.4f\n', cereb_mean);
+            fprintf('  warning: Cerebellum mean should be ~1.0, got %.4f\n', cereb_mean);
         end
         
         result.SUVR_file = suvr_file;
@@ -289,8 +290,8 @@ for i = 1:numel(norm_ids)
         global_suvrs = roi_values(~isnan(roi_values) & roi_values > 0);
         global_mean = mean(global_suvrs);
         
-        fprintf('  ✓ Cortical SUVR: %.4f\n', cortex_mean);
-        fprintf('  ✓ Global SUVR: %.4f\n', global_mean);
+        fprintf('  ok Cortical SUVR: %.4f\n', cortex_mean);
+        fprintf('  ok Global SUVR: %.4f\n', global_mean);
         
         % Amyloid classification
         is_positive = cortex_mean > amyloid_cutoff;
@@ -298,7 +299,7 @@ for i = 1:numel(norm_ids)
         status_str(status_str == "1") = 'POSITIVE';
         status_str(status_str == "0") = 'NEGATIVE';
         
-        fprintf('  ✓ Classification: %s (cutoff %.2f)\n', status_str, amyloid_cutoff);
+        fprintf('  ok Classification: %s (cutoff %.2f)\n', status_str, amyloid_cutoff);
         
         result.Cortex_SUVR = cortex_mean;
         result.Global_SUVR = global_mean;
@@ -310,21 +311,21 @@ for i = 1:numel(norm_ids)
         if create_suvr_overlays
             fprintf('STEP 7: SUVR Overlay\n');
             create_suvr_overlay_image(norm_t1, suvr_file, qc_dir, nid, cortex_mean, status_str);
-            fprintf('  ✓ Overlay saved\n');
+            fprintf('  ok Overlay saved\n');
         end
         
         result.Status = 'SUCCESS';
         result.Processing_time = toc;
         success_count = success_count + 1;
         
-        fprintf('  ✓✓✓ SUCCESS (%.1f seconds)\n\n', result.Processing_time);
+        fprintf('  ok SUCCESS (%.1f seconds)\n\n', result.Processing_time);
         
     catch ME
         result.Status = 'FAILED';
         result.Error_message = ME.message;
         result.Processing_time = toc;
         
-        fprintf('  ✗✗✗ FAILED: %s (%.1f seconds)\n\n', ME.message, result.Processing_time);
+        fprintf('  FAILED FAILED: %s (%.1f seconds)\n\n', ME.message, result.Processing_time);
         
         % Log error
         log_messages{end+1} = sprintf('%s: %s', nid, ME.message); %#ok<AGROW>
@@ -369,7 +370,7 @@ try
          'Global_SUVR', 'Cortex_SUVR', 'Amyloid_Classification', 'Processing_Time_sec', 'Error_Message'});
     
     writetable(T_summary, excel_output, 'Sheet', '1_Summary');
-    fprintf('  ✓ Sheet 1: Summary (%d subjects)\n', height(T_summary));
+    fprintf('  ok Sheet 1: Summary (%d subjects)\n', height(T_summary));
     
     % =====================================================================
     % SHEET 2: ALL ROI VALUES - Detailed SUVR for each ROI
@@ -411,7 +412,7 @@ try
     if ~isempty(roi_data)
         T_roi = cell2table(roi_data, 'VariableNames', roi_header);
         writetable(T_roi, excel_output, 'Sheet', '2_ROI_Details');
-        fprintf('  ✓ Sheet 2: ROI Details (%d subjects, %d ROIs)\n', height(T_roi), max_rois);
+        fprintf('  ok Sheet 2: ROI Details (%d subjects, %d ROIs)\n', height(T_roi), max_rois);
     end
     
     % =====================================================================
@@ -462,9 +463,9 @@ try
          'Cortex_SUVR', 'SUVR_Range_QC', 'Processing_Time', 'PET_File', 'T1_File'});
     
     writetable(T_qc, excel_output, 'Sheet', '3_Quality_Control');
-    fprintf('  ✓ Sheet 3: Quality Control\n');
+    fprintf('  ok Sheet 3: Quality Control\n');
     
-    fprintf('\n✓✓✓ Excel file saved: %s\n', excel_output);
+    fprintf('\nok Excel file saved: %s\n', excel_output);
     
 catch ME
     warning('Failed to write Excel file: %s', ME.message);
@@ -473,7 +474,7 @@ catch ME
     % Fallback to CSV
     csv_summary = fullfile(out_root, 'Summary.csv');
     writetable(T_summary, csv_summary);
-    fprintf('  ✓ %s\n', csv_summary);
+    fprintf('  ok %s\n', csv_summary);
 end
 
 %% ========================================================================
@@ -505,7 +506,7 @@ fclose(fid);
 %  ========================================================================
 
 fprintf('\n=================================================================\n');
-fprintf('PIPELINE COMPLETE\n');
+fprintf('done\n');
 fprintf('=================================================================\n');
 fprintf('Total subjects:        %d\n', numel(results));
 fprintf('Successfully processed: %d\n', success_count);
@@ -515,8 +516,8 @@ fprintf('\nAmyloid Classification:\n');
 pos_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'POSITIVE'), results));
 neg_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'NEGATIVE'), results));
 
-fprintf('  Aβ+ (POSITIVE): %d (%.1f%%)\n', pos_count, 100*pos_count/success_count);
-fprintf('  Aβ- (NEGATIVE): %d (%.1f%%)\n', neg_count, 100*neg_count/success_count);
+fprintf('  Abeta+ (POSITIVE): %d (%.1f%%)\n', pos_count, 100*pos_count/success_count);
+fprintf('  Abeta- (NEGATIVE): %d (%.1f%%)\n', neg_count, 100*neg_count/success_count);
 fprintf('\nOutput files:\n');
 fprintf('  Excel:   %s\n', excel_output);
 fprintf('  Log:     %s\n', log_file);

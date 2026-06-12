@@ -12,12 +12,12 @@ for cif_folder in "$DTI_DATA_ROOT"/*/
     if [ -f "$V1_file" ] && [ -f "$FA_file" ]
     then
 
-    echo "$V1_file and $FA_file FOUND"
+    echo "$V1_file and $FA_file found"
     fslmaths "$V1_file" -abs -mul "$FA_file" "$cif_folder/${cif_name}_RGB"
 
     else
 
-    echo "One or more files NOT FOUND and dtifit INCOMPLETE for $cif_folder"
+    echo "missing V1 or FA, RGB map not made for $cif_folder"
     fi
 
 done

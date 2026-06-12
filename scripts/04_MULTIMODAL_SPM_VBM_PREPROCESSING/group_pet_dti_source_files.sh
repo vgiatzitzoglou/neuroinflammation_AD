@@ -225,7 +225,7 @@ for SUB in "${SUBJECTS[@]}"; do
 
 done
 
-echo "--- Organization complete! ---"
+echo "--- organization done ---"
 echo "Your clean data is in '$OUTPUT_DIR'."
 
 

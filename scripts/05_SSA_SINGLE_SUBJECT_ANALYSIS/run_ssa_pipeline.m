@@ -1,9 +1,7 @@
-%% RUN SSA PIPELINE
-% Single active entry point for:
-% - selecting the normative HC reference set
-% - reslicing and optional intensity rescaling
-% - estimating subject-vs-control SPM models
-% - writing labelled cluster maps
+%% SSA main script
+% This is the SSA script I would start from now.
+% The older versions had the same bits copied around, so the boring repeated
+% parts are in +ssa. Still check paths/thresholds before running.
 
 clear; clc;
 
@@ -12,7 +10,7 @@ addpath(script_dir);
 
 cfg = ssa.default_config();
 
-% Edit these values for a local run.
+% Edit these for a local run if needed.
 % cfg.root_dir = fullfile(pwd, 'example_data', 'pet_subjects');
 % cfg.target_groups = {'AD', 'MCI', 'HC'};
 % cfg.include_remaining_controls = true;
@@ -24,7 +22,7 @@ spm_jobman('initcfg');
 cfg.mask_file = ssa.prepare_mask(cfg.mask_file);
 [~, control_scans, ref_img_path, reference_ids] = ssa.select_normative_controls(cfg);
 
-fprintf('\nProcessing SSA target groups...\n');
+fprintf('\nRunning SSA target groups...\n');
 processed = 0;
 skipped = 0;
 
@@ -76,4 +74,4 @@ for g = 1:numel(cfg.target_groups)
     end
 end
 
-fprintf('\nSSA pipeline complete. Processed: %d. Skipped/failed: %d.\n', processed, skipped);
+fprintf('\nSSA done. Processed: %d. Skipped/failed: %d.\n', processed, skipped);

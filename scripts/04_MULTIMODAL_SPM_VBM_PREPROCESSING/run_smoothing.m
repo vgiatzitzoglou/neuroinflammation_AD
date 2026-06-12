@@ -69,7 +69,7 @@ function run_smoothing()
     fprintf('Found %d files. Starting smoothing... This may take a while.\n', length(files_to_smooth));
     try
         spm_jobman('run', matlabbatch);
-        fprintf('--- Smoothing complete! ---\n');
+        fprintf('--- smoothing done ---\n');
     catch e
         fprintf('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');
         fprintf('ERROR during smoothing:\n');
