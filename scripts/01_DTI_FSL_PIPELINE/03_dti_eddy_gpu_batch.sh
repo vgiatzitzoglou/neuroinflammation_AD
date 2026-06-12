@@ -1,18 +1,18 @@
 #!/bin/bash
 
 # config
-MAIN_DIR="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
-SUBJECT_PATTERN="${DTI_SUBJECT_PATTERN:-*}"
+main_dir="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+subject_pattern="${DTI_SUBJECT_PATTERN:-*}"
 
-EDDY_EXECUTABLE="eddy_cuda11.0"
-if ! command -v "$EDDY_EXECUTABLE" &> /dev/null
+eddy_executable="eddy_cuda11.0"
+if ! command -v "$eddy_executable" > /dev/null 2>&1
 then
-    echo "ERROR: $EDDY_EXECUTABLE not found. Please ensure FSL is set up for GPU."
+    echo "error: $eddy_executable not found. check FSL/GPU setup"
     exit 1
 fi
 # ---------------------
 
-for subject_folder in "$MAIN_DIR"/$SUBJECT_PATTERN
+for subject_folder in "$main_dir"/$subject_pattern
 do
     [ ! -d "$subject_folder" ] && continue
     subject_name=$(basename "$subject_folder")
@@ -32,7 +32,7 @@ do
 
     # skip if already done
     if [ -f "$eddy_output" ]; then
-        echo "  - Output already exists, skipping."
+        echo "  - output already exists, skipping"
         continue
     fi
 
@@ -41,7 +41,7 @@ do
     then
 
         # run eddy
-        "$EDDY_EXECUTABLE" diffusion \
+        "$eddy_executable" diffusion \
                            --imain="$dwi_file" \
                            --mask="$mask" \
                            --index="$index_file" \
@@ -57,13 +57,13 @@ do
 
     else
         # enough detail to see what is missing
-        echo "  - ERROR: Missing required file(s) for $subject_name. Skipping."
-        [ ! -f "$dwi_file" ] && echo "    - MISSING: DWI File ($dwi_file)"
-        [ ! -f "$mask" ] && echo "    - MISSING: Brain Mask ($mask)"
-        [ ! -f "$bvec_file" ] && echo "    - MISSING: Bvec File ($bvec_file)"
-        [ ! -f "$bval_file" ] && echo "    - MISSING: Bval File ($bval_file)"
-        [ ! -f "$acqparams_file" ] && echo "    - MISSING: Acqparams File ($acqparams_file)"
-        [ ! -f "$index_file" ] && echo "    - MISSING: Index File ($index_file)"
+        echo "  - error: missing required file(s) for $subject_name, skipping"
+        [ ! -f "$dwi_file" ] && echo "    - missing DWI file ($dwi_file)"
+        [ ! -f "$mask" ] && echo "    - missing brain mask ($mask)"
+        [ ! -f "$bvec_file" ] && echo "    - missing bvec file ($bvec_file)"
+        [ ! -f "$bval_file" ] && echo "    - missing bval file ($bval_file)"
+        [ ! -f "$acqparams_file" ] && echo "    - missing acqparams file ($acqparams_file)"
+        [ ! -f "$index_file" ] && echo "    - missing index file ($index_file)"
     fi
 
 done

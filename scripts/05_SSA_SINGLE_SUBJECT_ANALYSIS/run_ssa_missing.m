@@ -19,7 +19,7 @@ else
 end
 
 subjects = {};
-fprintf('Scanning %s for missing SSA outputs...\n', cfg.root_dir);
+fprintf('scanning %s for missing SSA outputs...\n', cfg.root_dir);
 
 group_dirs = dir(cfg.root_dir);
 group_dirs = group_dirs([group_dirs.isdir] & ~startsWith({group_dirs.name}, '.'));
@@ -43,13 +43,13 @@ for g = 1:numel(group_dirs)
 
         spm_mat = fullfile(contrast_dir, 'SPM.mat');
         if ~exist(spm_mat, 'file')
-            fprintf('  [SKIP] %s/%s: no SPM.mat\n', group_name, subject_id);
+            fprintf('  skip: %s/%s no SPM.mat\n', group_name, subject_id);
             continue;
         end
 
         pet_img = ssa.find_pet_image(subject_dir, cfg.pet_patterns);
         if isempty(pet_img)
-            fprintf('  [SKIP] %s/%s: no PET image\n', group_name, subject_id);
+            fprintf('  skip: %s/%s no PET image\n', group_name, subject_id);
             continue;
         end
 
@@ -66,8 +66,8 @@ for g = 1:numel(group_dirs)
 end
 
 if isempty(subjects)
-    fprintf('No missing SSA outputs found.\n');
+    fprintf('no missing SSA outputs found.\n');
 else
-    fprintf('Found %d subjects with missing SSA outputs.\n', numel(subjects));
+    fprintf('found %d subjects with missing SSA outputs.\n', numel(subjects));
     ssa_batch(subjects, cfg.output_root);
 end

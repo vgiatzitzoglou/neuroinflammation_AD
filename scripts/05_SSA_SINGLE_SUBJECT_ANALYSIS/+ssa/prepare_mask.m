@@ -1,5 +1,5 @@
 function mask_file = prepare_mask(mask_file)
-%PREPARE_MASK Copy the analysis mask to a stable filename before SPM writes.
+% copy the analysis mask to a stable filename before SPM writes
 
 if isempty(mask_file)
     return;

@@ -1,49 +1,42 @@
 function run_pet_processing_v3()
-    % This script runs the full SUVR processing pipeline for the PET scans.
-    % It uses the outputs from your VBM segmentation (the deformation
-    % fields and tissue maps) to create a final, smoothed SUVR map
-    % that is in the exact same space as your VBM files.
-    %
-    % v3 Fix: Fixes the "spm_mean" undefined function error by 
-    % calculating the mean in MATLAB first, then passing it to ImCalc.
-    % AND fixes the 'mask_.file' typo.
-    %
-    % ---!! NEW (User Request): Appending '_2' to output files !! ---
+    % PBR28 SUVR processing.
+    % Needs the SPM segmentation/deformation files already beside the T1.
+    % TODO: check whether the _2 suffix is still needed before rerunning.
 
-    fprintf('--- Starting PET-SUVR Processing Batch (v3 - suffix _2) ---\n');
+    fprintf('starting PBR28 SUVR batch\n');
 
-    % --- 1. Setup Paths and Subjects ---
+    % paths and subjects
     script_dir = fileparts(mfilename('fullpath'));
     addpath(fileparts(script_dir));
     dataDir = fullfile(pwd, 'example_data', 'pbr28');
     
     spm_path = spm('Dir');
     atlas_file = fullfile(spm_path, 'tpm', 'labels_Neuromorphometrics.nii');
-    if ~exist(atlas_file, 'file'), fprintf('ERROR: Atlas file not found.\n'); return; end
+    if ~exist(atlas_file, 'file'), fprintf('error: Atlas file not found.\n'); return; end
     
-    SMOOTH_FWHM = [8 8 8];
+    smooth_fwhm = [8 8 8];
     
     subjects = pipeline.default_subjects();
 
-    fprintf('Found %d subjects to process...\n', numel(subjects));
+    fprintf('found %d subjects to process...\n', numel(subjects));
     
     spm('defaults', 'PET');
     spm_jobman('initcfg');
     
-    % --- 2. Loop Through Each Subject ---
+    % loop subjects
     for i = 1:numel(subjects)
         subjectID = subjects{i};
-        fprintf('\n--- Processing Subject: %s (%d/%d) ---\n', subjectID, i, numel(subjects));
+        fprintf('\nsubject %s (%d/%d)\n', subjectID, i, numel(subjects));
         
         subjectDir = find_subject_directory(dataDir, subjectID);
-        if isempty(subjectDir), fprintf('WARNING: Directory not found. Skipping.\n'); continue; end
+        if isempty(subjectDir), fprintf('warning: Directory not found. Skipping.\n'); continue; end
         
-        % --- 3. Find All Necessary Files ---
+        % find inputs
         t1_file = find_t1_file(subjectDir, subjectID);
-        if isempty(t1_file), fprintf('WARNING: T1 scan not found. Skipping.\n'); continue; end
+        if isempty(t1_file), fprintf('warning: T1 scan not found. Skipping.\n'); continue; end
         
         pet_file = find_pet_file(subjectDir, subjectID);
-        if isempty(pet_file), fprintf('WARNING: PET scan not found. Skipping.\n'); continue; end
+        if isempty(pet_file), fprintf('warning: PET scan not found. Skipping.\n'); continue; end
         
         [~, t1_name, t1_ext] = fileparts(t1_file);
         if strcmp(t1_ext, '.gz'), [~, t1_name, ~] = fileparts(t1_name); end
@@ -53,11 +46,11 @@ function run_pet_processing_v3()
         iy_file = fullfile(subjectDir, ['iy_' t1_name '.nii']);
         
         if ~exist(c2_file, 'file') || ~exist(y_file, 'file') || ~exist(iy_file, 'file')
-            fprintf('WARNING: VBM outputs (c2, y_, iy_) not found for %s. Did segmentation run? Skipping.\n', subjectID);
+            fprintf('warning: segmentation files missing for %s. skipping.\n', subjectID);
             continue;
         end
         
-        % --- 4. Define Intermediate Filenames ---
+        % intermediate names
         [pet_path, pet_name, pet_ext] = fileparts(pet_file);
         if strcmp(pet_ext, '.gz'), [~, pet_name, ~] = fileparts(pet_name); end
         resliced_pet_file = fullfile(pet_path, ['r' pet_name '.nii']);
@@ -66,16 +59,15 @@ function run_pet_processing_v3()
         warped_atlas_file = fullfile(subjectDir, 'w_native_temp_atlas_for_warping.nii');
         mask_file = fullfile(subjectDir, 'native_cerebellum_WM_mask.nii');
         
-        % ---!! FILENAME CHANGE HERE !! ---
         native_suvr_file = fullfile(subjectDir, 'native_SUVR_PET_2.nii');
         warped_suvr_file = fullfile(subjectDir, 'wnative_SUVR_PET_2.nii');
         final_suvr_file = fullfile(subjectDir, 'swnative_SUVR_PET_2.nii');
         
         
-        % --- 5. Run Pipeline Step-by-Step ---
+        % run steps
         try
-            % Step 1: Coregister PET to T1 (Estimate & Reslice)
-            fprintf('Step 1: Coregistering PET to T1...\n');
+            % step 1: PET to T1
+            fprintf('step 1: PET to T1\n');
             matlabbatch = {};
             matlabbatch{1}.spm.spatial.coreg.estwrite.ref = {[t1_file, ',1']};
             matlabbatch{1}.spm.spatial.coreg.estwrite.source = {[pet_file, ',1']};
@@ -91,13 +83,13 @@ function run_pet_processing_v3()
             
             if ~exist(resliced_pet_file, 'file'), error('Coregistered PET file not created.'); end
 
-            % Step 2a: Copy atlas to subject directory
-            fprintf('Step 2a: Copying atlas locally...\n');
+            % step 2a: copy atlas locally
+            fprintf('step 2a: copy atlas locally\n');
             copyfile(atlas_file, temp_atlas_file);
             if ~exist(temp_atlas_file, 'file'), error('Failed to copy atlas locally.'); end
             
-            % Step 2b: Warp Atlas from MNI to Native Space (using Inverse Warp)
-            fprintf('Step 2b: Warping atlas to native space...\n');
+            % step 2b: atlas to native space
+            fprintf('step 2b: atlas to native space\n');
             clear matlabbatch;
             matlabbatch{1}.spm.spatial.normalise.write.subj.def = {iy_file};
             matlabbatch{1}.spm.spatial.normalise.write.subj.resample = {[temp_atlas_file, ',1']};
@@ -109,8 +101,8 @@ function run_pet_processing_v3()
             
             if ~exist(warped_atlas_file, 'file'), error('Warped atlas file not created.'); end
 
-            % Step 3: Create Native Cerebellum WM Mask
-            fprintf('Step 3: Creating native cerebellum WM mask...\n');
+            % step 3: cerebellum WM mask
+            fprintf('step 3: cerebellum WM mask\n');
             clear matlabbatch;
             matlabbatch{1}.spm.util.imcalc.input = {
                                                    resliced_pet_file
@@ -128,8 +120,8 @@ function run_pet_processing_v3()
             
             if ~exist(mask_file, 'file'), error('Cerebellum mask file not created.'); end 
 
-            % Step 4a: Calculate mean of reference region in MATLAB
-            fprintf('Step 4a: Calculating mean of reference region...\n');
+            % step 4a: mean reference value
+            fprintf('step 4a: reference mean\n');
             Vpet = spm_vol(resliced_pet_file);
             Vmask = spm_vol(mask_file);
             pet_data = spm_read_vols(Vpet);
@@ -140,16 +132,15 @@ function run_pet_processing_v3()
                 error('Reference region mask is empty or contains no valid data.');
             end
             mean_ref_value = mean(ref_voxels);
-            fprintf('Mean reference value: %f\n', mean_ref_value);
+            fprintf('mean reference value: %f\n', mean_ref_value);
             if mean_ref_value == 0
                 error('Mean reference value is 0. Cannot divide.');
             end
 
-            % Step 4b: Calculate Native SUVR
-            fprintf('Step 4b: Calculating native SUVR...\n');
+            % step 4b: native SUVR
+            fprintf('step 4b: native SUVR\n');
             clear matlabbatch;
             matlabbatch{1}.spm.util.imcalc.input = {resliced_pet_file};
-            % ---!! FILENAME CHANGE HERE !! ---
             matlabbatch{1}.spm.util.imcalc.output = native_suvr_file; % (now '..._2.nii')
             matlabbatch{1}.spm.util.imcalc.outdir = {subjectDir};
             matlabbatch{1}.spm.util.imcalc.expression = sprintf('i1 / %f', mean_ref_value);
@@ -158,10 +149,10 @@ function run_pet_processing_v3()
             matlabbatch{1}.spm.util.imcalc.options.interp = 1;
             matlabbatch{1}.spm.util.imcalc.options.dtype = 16;
             spm_jobman('run', matlabbatch);
-            if ~exist(native_suvr_file, 'file'), error('Native SUVR file not created.'); end
+            if ~exist(native_suvr_file, 'file'), error('native SUVR file not created.'); end
 
-            % Step 5: Normalize Native SUVR to MNI Space (using Forward Warp)
-            fprintf('Step 5: Normalizing SUVR map to MNI space...\n');
+            % step 5: native SUVR to MNI
+            fprintf('step 5: SUVR to MNI\n');
             clear matlabbatch;
             matlabbatch{1}.spm.spatial.normalise.write.subj.def = {y_file};
             matlabbatch{1}.spm.spatial.normalise.write.subj.resample = {native_suvr_file};
@@ -171,24 +162,24 @@ function run_pet_processing_v3()
             matlabbatch{1}.spm.spatial.normalise.write.woptions.prefix = 'w';
             spm_jobman('run', matlabbatch);
             
-            if ~exist(warped_suvr_file, 'file'), error('Warped SUVR file not created.'); end
+            if ~exist(warped_suvr_file, 'file'), error('warped SUVR file not created.'); end
 
-            % Step 6: Smooth the final, warped SUVR map
-            fprintf('Step 6: Smoothing final SUVR map...\n');
+            % step 6: smooth final map
+            fprintf('step 6: smooth SUVR map\n');
             clear matlabbatch;
             matlabbatch{1}.spm.spatial.smooth.data = {warped_suvr_file};
-            matlabbatch{1}.spm.spatial.smooth.fwhm = SMOOTH_FWHM;
+            matlabbatch{1}.spm.spatial.smooth.fwhm = smooth_fwhm;
             matlabbatch{1}.spm.spatial.smooth.dtype = 0;
             matlabbatch{1}.spm.spatial.smooth.im = 0;
             matlabbatch{1}.spm.spatial.smooth.prefix = 's';
             spm_jobman('run', matlabbatch);
             
-            if ~exist(final_suvr_file, 'file'), error('Smoothed SUVR file not created.'); end
+            if ~exist(final_suvr_file, 'file'), error('smoothed SUVR file not created.'); end
             
-            fprintf('--- Successfully processed PET for Subject: %s ---\n', subjectID);
+            fprintf('done PET for %s\n', subjectID);
             
-            % --- 6. Cleanup Intermediate Files ---
-            fprintf('Cleaning up intermediate files...\n');
+            % clean intermediates
+            fprintf('cleaning intermediates\n');
             delete(resliced_pet_file);
             delete(temp_atlas_file);
             delete(warped_atlas_file);
@@ -197,20 +188,17 @@ function run_pet_processing_v3()
             delete(warped_suvr_file);
             
         catch e
-            fprintf('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');
-            fprintf('ERROR processing Subject: %s\n', subjectID);
-            fprintf('Error message: %s\n', e.message);
-            fprintf('At line: %d in file %s\n', e.stack(1).line, e.stack(1).name);
-            fprintf('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n');
+            fprintf('error processing %s: %s\n', subjectID, e.message);
+            fprintf('line %d in %s\n', e.stack(1).line, e.stack(1).name);
         end
         
     end
     
-    fprintf('\n--- PET-SUVR Processing Batch Finished! ---\n');
+    fprintf('\nPBR28 SUVR batch done\n');
 
-end % End of main function
+end % main function
 
-% --- Helper Functions ---
+% small path helpers
 function full_dir_path = find_subject_directory(baseDir, subjectID)
     full_dir_path = '';
     path1 = fullfile(baseDir, subjectID);

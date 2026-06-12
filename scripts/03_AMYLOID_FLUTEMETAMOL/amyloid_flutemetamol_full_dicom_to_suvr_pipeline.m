@@ -2,29 +2,26 @@
 % DICOM -> SUVR values/table. This is still quite path-dependent, so check the
 % folders and atlas before running.
 
-%% ========================================================================
-%  CONFIGURATION
-%  ========================================================================
+%  config
 
-% Input paths
+% input paths
 excel_path = fullfile(pwd, 'example_data', 'master_subjects.xlsx');
 base_path = fullfile(pwd, 'example_data', 'amyloid_dicom');
 out_root = fullfile(pwd, 'outputs', 'amyloid_suvr');
 
 % T1 MRI structure: base_path/{SubjectID}/{SubjectID}_MRI/{SubjectID}_MRI/scans/2_MPRAGE_ADNI_P2/DICOM/
-% T1 files start with: W*
+% T1 files start with W*
 
-% Atlas configuration
+% atlas bits
 atlas_path = fullfile(pwd, 'atlases', 'hammers_atlas.img');
 cerebellum_rois = [17, 18];  % Whole cerebellum (R and L)
 brainstem_roi = 19;
 
-% Cortical ROIs for amyloid quantification (exclude cerebellum, brainstem, ventricles)
-% Based on Hammers atlas (84 ROIs total)
-% Exclude: 17-18 (cerebellum), 19 (brainstem), 45-52 (ventricles), 77-84 (white matter/subcortical)
+% cortical ROIs for amyloid quantification
+% exclude cerebellum, brainstem, ventricles, WM/subcortical labels
 cortical_rois = [1:16, 20:44, 53:76];  % All gray matter cortical regions
 
-% Amyloid positivity cutoff (Park et al. 2025)
+% amyloid positivity cutoff (Park et al. 2025)
 amyloid_cutoff = 1.38;  % Whole cerebellum reference
 % TODO: change this if using a different reference region / paper.
 
@@ -36,12 +33,12 @@ bounding_box = [-90 -126 -72; 90 90 108];  % Tight brain
 frames_to_average = 'all';  % Average all frames (90-120 min post-injection typical)
 exclude_movement = true;  % Flag for movement detection (manual review needed)
 
-% Processing options
+% processing options
 compress_output = false;  % No compression (faster)
 save_qc_images = true;  % Save quality control images
 create_suvr_overlays = true;  % Create SUVR overlay images
 
-% Scan name patterns for flutemetamol
+% scan name patterns for flutemetamol
 scan_patterns = {
     '3D mode 6 x 5min list mode acquisition (AC)',
     'flutemetamol',
@@ -49,37 +46,31 @@ scan_patterns = {
     'amyloid',
     'AC'
 };
-
-fprintf('=================================================================\n');
-fprintf('FLUTEMETAMOL AMYLOID SUVR\n');
-fprintf('=================================================================\n');
-fprintf('Configuration:\n');
-fprintf('  Atlas:           Hammers (84 ROIs)\n');
-fprintf('  Reference:       Whole cerebellum (ROIs 17-18)\n');
-fprintf('  Cutoff:          SUVR > %.2f (Park 2025)\n', amyloid_cutoff);
+fprintf('flutemetamol amyloid SUVR\n');
+fprintf('settings:\n');
+fprintf('  atlas:           Hammers (84 ROIs)\n');
+fprintf('  reference:       whole cerebellum (ROIs 17-18)\n');
+fprintf('  cutoff:          SUVR > %.2f (Park 2025)\n', amyloid_cutoff);
 fprintf('  MNI space:       %dmm isotropic, tight bbox\n', voxel_size(1));
-fprintf('  Cortical ROIs:   %d regions\n', length(cortical_rois));
+fprintf('  cortical ROIs:   %d regions\n', length(cortical_rois));
 fprintf('  QC images:       %s\n', string(save_qc_images));
-fprintf('=================================================================\n\n');
 
-%% ========================================================================
-%  VALIDATE ENVIRONMENT
-%  ========================================================================
+%  check setup
 
-fprintf('Validating environment...\n');
+fprintf('checking environment...\n');
 
-% Check required paths
+% check required paths
 assert(exist(excel_path, 'file') ~= 0, 'Excel file not found: %s', excel_path);
 assert(exist(base_path, 'dir') ~= 0, 'Base path not found: %s', base_path);
 assert(exist(atlas_path, 'file') ~= 0, 'Atlas not found: %s', atlas_path);
 
-% Check SPM12
+% check SPM12
 if isempty(which('spm'))
     error('SPM12 not found in MATLAB path. Please add SPM12.');
 end
 fprintf('  ok SPM12 found\n');
 
-% Check dcm2niix
+% check dcm2niix
 [status, ~] = system('which dcm2niix');
 if status ~= 0
     warning('dcm2niix not in PATH. DICOM conversion will fail.');
@@ -87,7 +78,7 @@ else
     fprintf('  ok dcm2niix found\n');
 end
 
-% Create output directory structure
+% create output dirs
 if ~exist(out_root, 'dir')
     mkdir(out_root);
 end
@@ -97,41 +88,37 @@ if save_qc_images && ~exist(qc_dir, 'dir')
     mkdir(qc_dir);
 end
 
-fprintf('  ok Output directories created\n\n');
+fprintf('  ok output dirs created\n\n');
 
-%% ========================================================================
-%  LOAD SUBJECT IDS FROM EXCEL
-%  ========================================================================
+%  load subject ids
 
-fprintf('Loading subject IDs from Excel...\n');
+fprintf('loading subject IDs from Excel...\n');
 
 try
     T_master = readtable(excel_path);
     raw_ids = T_master{:, 1};
     
-    % Convert to cell array of strings
+    % convert to cell array of strings
     ids = cell(size(raw_ids, 1), 1);
     for i = 1:size(raw_ids, 1)
         ids{i} = to_string(raw_ids(i, :));
     end
     ids = ids(~cellfun(@isempty, ids));
     
-    % Normalize IDs (MCI013, AD012, C003 format with leading zeros)
+    % normalize IDs (MCI013, AD012, C003 format with leading zeros)
     norm_ids = cellfun(@normalize_id, ids, 'UniformOutput', false);
     
-    fprintf('  Found %d subjects in Excel\n', numel(ids));
-    fprintf('  Example IDs: %s, %s, %s\n', ids{1}, ids{min(2,end)}, ids{min(3,end)});
-    fprintf('  Normalized:  %s, %s, %s\n\n', norm_ids{1}, norm_ids{min(2,end)}, norm_ids{min(3,end)});
+    fprintf('  found %d subjects in Excel\n', numel(ids));
+    fprintf('  example IDs: %s, %s, %s\n', ids{1}, ids{min(2,end)}, ids{min(3,end)});
+    fprintf('  normalized:  %s, %s, %s\n\n', norm_ids{1}, norm_ids{min(2,end)}, norm_ids{min(3,end)});
     
 catch ME
     error('Failed to read Excel: %s', ME.message);
 end
 
-%% ========================================================================
-%  BUILD SUBJECT DIRECTORY MAP
-%  ========================================================================
+%  subject folders
 
-fprintf('Scanning for subject folders...\n');
+fprintf('scanning for subject folders...\n');
 
 subj_dirs = dir(base_path);
 subj_dirs = subj_dirs([subj_dirs.isdir] & ~ismember({subj_dirs.name}, {'.','..'}));
@@ -148,15 +135,10 @@ for i = 1:numel(subj_dirs)
     subj_map(norm) = [subj_map(norm), {fullfile(base_path, name)}];
 end
 
-fprintf('  Mapped %d unique subject IDs\n\n', subj_map.Count);
+fprintf('  mapped %d unique subject IDs\n\n', subj_map.Count);
 
-%% ========================================================================
-%  MAIN PROCESSING LOOP
-%  ========================================================================
-
-fprintf('=================================================================\n');
-fprintf('PROCESSING SUBJECTS\n');
-fprintf('=================================================================\n\n');
+%  main loop
+fprintf('processing subjects\n');
 
 results = cell(numel(norm_ids), 1);
 success_count = 0;
@@ -169,12 +151,12 @@ for i = 1:numel(norm_ids)
     fprintf('[%d/%d] %s (%s)\n', i, numel(norm_ids), ids{i}, nid);
     fprintf('-----------------------------------------------------------\n');
     
-    % Initialize result structure
+    % init result row
     result = init_result_struct(ids{i}, nid);
     
     try
-        %% STEP 1: Find and convert DICOM to NIfTI
-        fprintf('STEP 1: DICOM Conversion\n');
+        %% step 1: find and convert DICOM to NIfTI
+        fprintf('step 1: DICOM conversion\n');
         
         if ~isKey(subj_map, nid)
             error('No subject folder found');
@@ -184,36 +166,36 @@ for i = 1:numel(norm_ids)
         mean_pet = '';
         dicom_path_used = '';
         
-        % Try each subject folder
+        % try each subject folder
         for p = 1:numel(subj_paths)
             subj_path = subj_paths{p};
             
-            % Find DICOM directory
+            % find DICOM directory
             dicom_dir = find_dicom_pet(subj_path, nid, scan_patterns);
             if isempty(dicom_dir)
                 continue;
             end
             
-            fprintf('  Found DICOM: %s\n', dicom_dir);
+            fprintf('  found DICOM: %s\n', dicom_dir);
             dicom_path_used = dicom_dir;
             
-            % Create output directory
+            % create output directory
             out_dir = fullfile(out_root, nid, 'nifti');
             if ~exist(out_dir, 'dir')
                 mkdir(out_dir);
             end
             
-            % Convert DICOM
+            % convert DICOM
             [ok, msg] = run_dcm2niix(dicom_dir, out_dir);
             if ~ok
-                fprintf('  error: Conversion failed: %s\n', msg);
+                fprintf('  error: conversion failed: %s\n', msg);
                 continue;
             end
             
-            % Average 4D frames
+            % average 4D frames
             mean_pet = average_4d_frames(out_dir, nid);
             if ~isempty(mean_pet)
-                fprintf('  ok Mean PET: %s\n', mean_pet);
+                fprintf('  ok mean PET: %s\n', mean_pet);
                 break;
             end
         end
@@ -225,8 +207,8 @@ for i = 1:numel(norm_ids)
         result.PET_file = mean_pet;
         result.DICOM_path = dicom_path_used;
         
-        %% STEP 2: Find T1 MRI
-        fprintf('STEP 2: Locate T1 MRI\n');
+        %% step 2: find T1 MRI
+        fprintf('step 2: locate T1 MRI\n');
         
         t1_file = find_t1_mri(subj_paths{1}, nid);
         if isempty(t1_file)
@@ -236,24 +218,24 @@ for i = 1:numel(norm_ids)
         fprintf('  ok T1: %s\n', t1_file);
         result.T1_file = t1_file;
         
-        %% STEP 3: Coregister PET to T1
-        fprintf('STEP 3: Coregistration\n');
+        %% step 3: coregister PET to T1
+        fprintf('step 3: coregistration\n');
         
         coreg_pet = coregister_pet_to_t1(mean_pet, t1_file);
         fprintf('  ok Coregistered: %s\n', coreg_pet);
         
-        % QC: Save coregistration check
+        % QC image for coregistration
         if save_qc_images
             save_coreg_qc(t1_file, coreg_pet, qc_dir, nid);
         end
         
-        %% STEP 4: Normalize to MNI space
-        fprintf('STEP 4: Spatial Normalization\n');
+        %% step 4: normalize to MNI space
+        fprintf('step 4: spatial normalization\n');
         
         [norm_t1, norm_pet, def_field] = normalize_to_mni(t1_file, coreg_pet, voxel_size, bounding_box);
-        fprintf('  ok Normalized PET: %s\n', norm_pet);
+        fprintf('  ok normalized PET: %s\n', norm_pet);
         
-        % QC: Save normalization check
+        % QC image for normalization
         if save_qc_images
             save_norm_qc(norm_t1, norm_pet, qc_dir, nid);
         end
@@ -261,45 +243,45 @@ for i = 1:numel(norm_ids)
         result.Normalized_PET = norm_pet;
         result.Deformation_field = def_field;
         
-        %% STEP 5: Calculate SUVR
-        fprintf('STEP 5: SUVR Calculation\n');
+        %% step 5: calculate SUVR
+        fprintf('step 5: SUVR calculation\n');
         
         [suvr_file, cereb_mean] = calculate_suvr_whole_cerebellum(norm_pet, atlas_path, ...
                                                                    cerebellum_rois, out_root, nid);
         fprintf('  ok SUVR image: %s\n', suvr_file);
-        fprintf('  ok Cerebellum mean: %.4f\n', cereb_mean);
+        fprintf('  ok cerebellum mean: %.4f\n', cereb_mean);
         
         if abs(cereb_mean - 1.0) > 0.1
-            fprintf('  warning: Cerebellum mean should be ~1.0, got %.4f\n', cereb_mean);
+            fprintf('  warning: cerebellum mean should be ~1.0, got %.4f\n', cereb_mean);
         end
         
         result.SUVR_file = suvr_file;
         result.Cerebellum_mean = cereb_mean;
         
-        %% STEP 6: Extract ROI values
-        fprintf('STEP 6: ROI Extraction\n');
+        %% step 6: extract ROI values
+        fprintf('step 6: ROI extraction\n');
         
         [roi_values, roi_labels] = extract_all_roi_values(suvr_file, atlas_path);
         
-        % Calculate cortical SUVR (mean of cortical ROIs)
+        % cortical SUVR (mean of cortical ROIs)
         cortex_suvrs = roi_values(cortical_rois);
         cortex_suvrs = cortex_suvrs(~isnan(cortex_suvrs));
         cortex_mean = mean(cortex_suvrs);
         
-        % Global brain SUVR (all non-zero ROIs)
+        % global brain SUVR (all non-zero ROIs)
         global_suvrs = roi_values(~isnan(roi_values) & roi_values > 0);
         global_mean = mean(global_suvrs);
         
-        fprintf('  ok Cortical SUVR: %.4f\n', cortex_mean);
-        fprintf('  ok Global SUVR: %.4f\n', global_mean);
+        fprintf('  ok cortical SUVR: %.4f\n', cortex_mean);
+        fprintf('  ok global SUVR: %.4f\n', global_mean);
         
-        % Amyloid classification
+        % amyloid classification
         is_positive = cortex_mean > amyloid_cutoff;
         status_str = string(is_positive);
-        status_str(status_str == "1") = 'POSITIVE';
-        status_str(status_str == "0") = 'NEGATIVE';
+        status_str(status_str == "1") = 'positive';
+        status_str(status_str == "0") = 'negative';
         
-        fprintf('  ok Classification: %s (cutoff %.2f)\n', status_str, amyloid_cutoff);
+        fprintf('  ok classification: %s (cutoff %.2f)\n', status_str, amyloid_cutoff);
         
         result.Cortex_SUVR = cortex_mean;
         result.Global_SUVR = global_mean;
@@ -307,47 +289,40 @@ for i = 1:numel(norm_ids)
         result.ROI_values = roi_values;
         result.ROI_labels = roi_labels;
         
-        %% STEP 7: Create SUVR overlay (optional)
+        %% step 7: create SUVR overlay (optional)
         if create_suvr_overlays
-            fprintf('STEP 7: SUVR Overlay\n');
+            fprintf('step 7: SUVR overlay\n');
             create_suvr_overlay_image(norm_t1, suvr_file, qc_dir, nid, cortex_mean, status_str);
-            fprintf('  ok Overlay saved\n');
+            fprintf('  ok overlay saved\n');
         end
         
-        result.Status = 'SUCCESS';
+        result.Status = 'success';
         result.Processing_time = toc;
         success_count = success_count + 1;
         
-        fprintf('  ok SUCCESS (%.1f seconds)\n\n', result.Processing_time);
+        fprintf('  ok success (%.1f seconds)\n\n', result.Processing_time);
         
     catch ME
-        result.Status = 'FAILED';
+        result.Status = 'failed';
         result.Error_message = ME.message;
         result.Processing_time = toc;
         
-        fprintf('  FAILED FAILED: %s (%.1f seconds)\n\n', ME.message, result.Processing_time);
+        fprintf('  failed: %s (%.1f seconds)\n\n', ME.message, result.Processing_time);
         
-        % Log error
+        % log error
         log_messages{end+1} = sprintf('%s: %s', nid, ME.message); %#ok<AGROW>
     end
     
     results{i} = result;
 end
 
-%% ========================================================================
-%  EXPORT RESULTS TO EXCEL (3 SHEETS)
-%  ========================================================================
-
-fprintf('=================================================================\n');
-fprintf('EXPORTING RESULTS\n');
-fprintf('=================================================================\n');
+%  export tables
+fprintf('exporting results\n');
 
 excel_output = fullfile(out_root, sprintf('Flutemetamol_SUVR_Results_%s.xlsx', datestr(now, 'yyyymmdd_HHMMSS')));
 
 try
-    % =====================================================================
-    % SHEET 1: SUMMARY - Status, Global SUVR, Classification
-    % =====================================================================
+    % sheet 1: summary
     
     summary_data = {};
     for i = 1:numel(results)
@@ -370,36 +345,34 @@ try
          'Global_SUVR', 'Cortex_SUVR', 'Amyloid_Classification', 'Processing_Time_sec', 'Error_Message'});
     
     writetable(T_summary, excel_output, 'Sheet', '1_Summary');
-    fprintf('  ok Sheet 1: Summary (%d subjects)\n', height(T_summary));
+    fprintf('  ok sheet 1: summary (%d subjects)\n', height(T_summary));
     
-    % =====================================================================
-    % SHEET 2: ALL ROI VALUES - Detailed SUVR for each ROI
-    % =====================================================================
+    % sheet 2: all ROI values
     
     roi_data = {};
     roi_header = {'Subject_ID', 'Normalized_ID', 'Status'};
     
-    % Get max number of ROIs
+    % get max number of ROIs
     max_rois = 0;
     for i = 1:numel(results)
-        if strcmp(results{i}.Status, 'SUCCESS')
+        if strcmp(results{i}.Status, 'success')
             max_rois = max(max_rois, length(results{i}.ROI_values));
         end
     end
     
-    % Build ROI column names
+    % build ROI column names
     for j = 1:max_rois
         roi_header{end+1} = sprintf('ROI_%03d_SUVR', j); %#ok<AGROW>
     end
     
-    % Extract ROI data
+    % extract ROI data
     for i = 1:numel(results)
         r = results{i};
-        if strcmp(r.Status, 'SUCCESS')
+        if strcmp(r.Status, 'success')
             row_data = {r.Subject_ID, r.Normalized_ID, r.Status};
             roi_vals = r.ROI_values;
             
-            % Pad with NaN if needed
+            % pad with NaN if needed
             if length(roi_vals) < max_rois
                 roi_vals(end+1:max_rois) = NaN;
             end
@@ -412,35 +385,33 @@ try
     if ~isempty(roi_data)
         T_roi = cell2table(roi_data, 'VariableNames', roi_header);
         writetable(T_roi, excel_output, 'Sheet', '2_ROI_Details');
-        fprintf('  ok Sheet 2: ROI Details (%d subjects, %d ROIs)\n', height(T_roi), max_rois);
+        fprintf('  ok sheet 2: ROI details (%d subjects, %d ROIs)\n', height(T_roi), max_rois);
     end
     
-    % =====================================================================
-    % SHEET 3: QUALITY CONTROL METRICS
-    % =====================================================================
+    % sheet 3: QC checks
     
     qc_data = {};
     for i = 1:numel(results)
         r = results{i};
         
-        % Calculate QC metrics
+        % calculate QC metrics
         cereb_check = '';
         if ~isnan(r.Cerebellum_mean)
             if abs(r.Cerebellum_mean - 1.0) < 0.05
-                cereb_check = 'PASS';
+                cereb_check = 'pass';
             elseif abs(r.Cerebellum_mean - 1.0) < 0.1
-                cereb_check = 'WARNING';
+                cereb_check = 'warning';
             else
-                cereb_check = 'FAIL';
+                cereb_check = 'fail';
             end
         end
         
         suvr_range_check = '';
         if ~isnan(r.Cortex_SUVR)
             if r.Cortex_SUVR >= 0.5 && r.Cortex_SUVR <= 3.0
-                suvr_range_check = 'PASS';
+                suvr_range_check = 'pass';
             else
-                suvr_range_check = 'FAIL';
+                suvr_range_check = 'fail';
             end
         end
         
@@ -463,13 +434,13 @@ try
          'Cortex_SUVR', 'SUVR_Range_QC', 'Processing_Time', 'PET_File', 'T1_File'});
     
     writetable(T_qc, excel_output, 'Sheet', '3_Quality_Control');
-    fprintf('  ok Sheet 3: Quality Control\n');
+    fprintf('  ok sheet 3: QC\n');
     
     fprintf('\nok Excel file saved: %s\n', excel_output);
     
 catch ME
     warning('Failed to write Excel file: %s', ME.message);
-    fprintf('  Saving CSV files instead...\n');
+    fprintf('  saving CSV files instead...\n');
     
     % Fallback to CSV
     csv_summary = fullfile(out_root, 'Summary.csv');
@@ -477,23 +448,18 @@ catch ME
     fprintf('  ok %s\n', csv_summary);
 end
 
-%% ========================================================================
-%  PROCESSING LOG
-%  ========================================================================
+%  processing log
 
-% Save processing log
 log_file = fullfile(out_root, sprintf('Processing_Log_%s.txt', datestr(now, 'yyyymmdd_HHMMSS')));
 fid = fopen(log_file, 'w');
-fprintf(fid, 'FLUTEMETAMOL AMYLOID SUVR PIPELINE - PROCESSING LOG\n');
-fprintf(fid, '=================================================================\n');
-fprintf(fid, 'Date: %s\n', datestr(now));
-fprintf(fid, 'Total subjects: %d\n', numel(results));
-fprintf(fid, 'Successful: %d\n', success_count);
-fprintf(fid, 'Failed: %d\n', numel(results) - success_count);
-fprintf(fid, '=================================================================\n\n');
+fprintf(fid, 'flutemetamol amyloid SUVR pipeline - processing log\n');
+fprintf(fid, 'date: %s\n', datestr(now));
+fprintf(fid, 'total subjects: %d\n', numel(results));
+fprintf(fid, 'successful: %d\n', success_count);
+fprintf(fid, 'failed: %d\n', numel(results) - success_count);
 
 if ~isempty(log_messages)
-    fprintf(fid, 'ERRORS:\n');
+    fprintf(fid, 'errors:\n');
     for i = 1:length(log_messages)
         fprintf(fid, '  %s\n', log_messages{i});
     end
@@ -501,34 +467,26 @@ end
 
 fclose(fid);
 
-%% ========================================================================
-%  FINAL SUMMARY
-%  ========================================================================
-
-fprintf('\n=================================================================\n');
+%  final summary
 fprintf('done\n');
-fprintf('=================================================================\n');
-fprintf('Total subjects:        %d\n', numel(results));
-fprintf('Successfully processed: %d\n', success_count);
-fprintf('Failed:                 %d\n', numel(results) - success_count);
-fprintf('\nAmyloid Classification:\n');
+fprintf('total subjects:        %d\n', numel(results));
+fprintf('successfully processed: %d\n', success_count);
+fprintf('failed:                 %d\n', numel(results) - success_count);
+fprintf('\namyloid classification:\n');
 
-pos_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'POSITIVE'), results));
-neg_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'NEGATIVE'), results));
+pos_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'positive'), results));
+neg_count = sum(cellfun(@(r) strcmp(r.Amyloid_status, 'negative'), results));
 
-fprintf('  Abeta+ (POSITIVE): %d (%.1f%%)\n', pos_count, 100*pos_count/success_count);
-fprintf('  Abeta- (NEGATIVE): %d (%.1f%%)\n', neg_count, 100*neg_count/success_count);
-fprintf('\nOutput files:\n');
+fprintf('  Abeta+ (positive): %d (%.1f%%)\n', pos_count, 100*pos_count/success_count);
+fprintf('  Abeta- (negative): %d (%.1f%%)\n', neg_count, 100*neg_count/success_count);
+fprintf('\noutput files:\n');
 fprintf('  Excel:   %s\n', excel_output);
 fprintf('  Log:     %s\n', log_file);
 if save_qc_images
     fprintf('  QC images: %s\n', qc_dir);
 end
-fprintf('=================================================================\n');
 
-%% ========================================================================
-%  HELPER FUNCTIONS
-%  ========================================================================
+%  helper functions
 
 function result = init_result_struct(id, nid)
     result = struct();
@@ -573,7 +531,7 @@ function s = to_string(x)
 end
 
 function nid = normalize_id(id)
-    % Normalize to format: MCI013, AD012, C003 (with leading zeros)
+    % normalize to MCI013, AD012, C003 style
     s = upper(regexprep(char(id), '\s+', ''));
     if isempty(s), nid = ''; return; end
     
@@ -582,28 +540,28 @@ function nid = normalize_id(id)
     if ~isempty(m)
         prefix = m{1};
         num = m{2};
-        num = regexprep(num, '^0+', '');  % Remove leading zeros
+        num = regexprep(num, '^0+', '');  % remove leading zeros
         if isempty(num), num = '0'; end
-        num = sprintf('%03d', str2double(num));  % Add back as 3 digits
+        num = sprintf('%03d', str2double(num));  % add back as 3 digits
         nid = [prefix num];
         return;
     end
     
-    % Fallback
+    % fallback
     nid = regexprep(s, '[^A-Z0-9]', '');
 end
 
 function dicom_dir = find_dicom_pet(subj_path, nid, patterns)
-    % Find DICOM PET directory following structure:
+    % find DICOM PET directory following structure
     % {subj_path}/{nid}_MRI/{nid}_MRI/scans/{scan_folder}/DICOM/
     
     dicom_dir = '';
     
-    % Look for MRI subdirectory
+    % look for MRI subdirectory
     mri_path = fullfile(subj_path, [nid '_MRI'], [nid '_MRI'], 'scans');
     
     if ~exist(mri_path, 'dir')
-        % Try alternative structure
+        % try alternative structure
         mri_path = fullfile(subj_path, 'scans');
     end
     
@@ -611,7 +569,7 @@ function dicom_dir = find_dicom_pet(subj_path, nid, patterns)
         return;
     end
     
-    % Find scan folder matching patterns
+    % find scan folder matching patterns
     scan_folders = dir(mri_path);
     scan_folders = scan_folders([scan_folders.isdir] & ~ismember({scan_folders.name}, {'.','..'}));
     
@@ -621,11 +579,11 @@ function dicom_dir = find_dicom_pet(subj_path, nid, patterns)
         % Check if matches any pattern
         for p = 1:numel(patterns)
             if contains(lower(scan_name), lower(patterns{p}))
-                % Found matching scan, look for DICOM
+                % found matching scan, look for DICOM
                 candidate = fullfile(mri_path, scan_name, 'DICOM');
                 
                 if exist(candidate, 'dir')
-                    % Check if has DICOM files
+                    % check if has DICOM files
                     dcm_files = dir(fullfile(candidate, '*'));
                     dcm_files = dcm_files(~[dcm_files.isdir]);
                     
@@ -640,19 +598,19 @@ function dicom_dir = find_dicom_pet(subj_path, nid, patterns)
 end
 
 function t1_file = find_t1_mri(subj_path, nid)
-    % Find T1 MRI file starting with W* in DICOM folder
-    % Structure: {subj_path}/{nid}_MRI/{nid}_MRI/scans/2_MPRAGE_ADNI_P2/DICOM/
+    % find T1 MRI file starting with W* in DICOM folder
+    % structure: {subj_path}/{nid}_MRI/{nid}_MRI/scans/2_MPRAGE_ADNI_P2/DICOM/
     
     t1_file = '';
     
-    % Build path to MPRAGE DICOM
+    % build path to MPRAGE DICOM
     mprage_path = fullfile(subj_path, [nid '_MRI'], [nid '_MRI'], 'scans', '2_MPRAGE_ADNI_P2', 'DICOM');
     
     if ~exist(mprage_path, 'dir')
-        % Try alternative structure
+        % try alternative structure
         scans_dir = fullfile(subj_path, 'scans');
         if exist(scans_dir, 'dir')
-            % Look for MPRAGE folder
+            % look for MPRAGE folder
             scan_folders = dir(scans_dir);
             scan_folders = scan_folders([scan_folders.isdir]);
             
@@ -669,17 +627,17 @@ function t1_file = find_t1_mri(subj_path, nid)
         return;
     end
     
-    % Look for files starting with W*
+    % look for files starting with W*
     w_files = dir(fullfile(mprage_path, 'W*.nii'));
     
     if ~isempty(w_files)
-        % Use most recent if multiple
+        % use most recent if multiple
         [~, idx] = max([w_files.datenum]);
         t1_file = fullfile(mprage_path, w_files(idx).name);
         return;
     end
     
-    % Fallback: any .nii file
+    % fallback: any .nii file
     nii_files = dir(fullfile(mprage_path, '*.nii'));
     if ~isempty(nii_files)
         [~, idx] = max([nii_files.datenum]);
@@ -688,7 +646,7 @@ function t1_file = find_t1_mri(subj_path, nid)
 end
 
 function [ok, msg] = run_dcm2niix(dicom_dir, out_dir)
-    % Run dcm2niix without compression
+    % run dcm2niix without compression
     cmd = sprintf('dcm2niix -z n -o "%s" "%s"', out_dir, dicom_dir);
     [status, output] = system(cmd);
     ok = (status == 0);
@@ -696,7 +654,7 @@ function [ok, msg] = run_dcm2niix(dicom_dir, out_dir)
 end
 
 function mean_out = average_4d_frames(out_dir, nid)
-    % Average all frames from 4D PET
+    % average all frames from 4D PET
     mean_out = '';
     
     nii_files = dir(fullfile(out_dir, '*.nii'));
@@ -704,7 +662,7 @@ function mean_out = average_4d_frames(out_dir, nid)
         return;
     end
     
-    % Use largest file (likely the 4D series)
+    % use largest file, probably the 4D series
     [~, idx] = max([nii_files.bytes]);
     nii_path = fullfile(out_dir, nii_files(idx).name);
     
@@ -712,17 +670,17 @@ function mean_out = average_4d_frames(out_dir, nid)
         V = spm_vol(nii_path);
         
         if numel(V) == 1
-            % Already a single frame
+            % already a single frame
             mean_out = nii_path;
             return;
         end
         
-        % Read all frames and average
-        fprintf('    Averaging %d frames...\n', numel(V));
+        % read all frames and average
+        fprintf('    averaging %d frames...\n', numel(V));
         Y = spm_read_vols(V);
         Ymean = mean(Y, 4);
         
-        % Write mean image
+        % write mean image
         Vout = V(1);
         Vout.fname = fullfile(out_dir, [nid '_mean.nii']);
         Vout.descrip = sprintf('Mean of %d frames', numel(V));
@@ -731,7 +689,7 @@ function mean_out = average_4d_frames(out_dir, nid)
         mean_out = Vout.fname;
         
     catch ME
-        fprintf('    Warning: %s\n', ME.message);
+        fprintf('    warning: %s\n', ME.message);
     end
 end
 
@@ -761,14 +719,14 @@ end
 function [norm_t1, norm_pet, def_field] = normalize_to_mni(t1_file, pet_file, voxel_size, bbox)
     % SPM segmentation + normalization with custom parameters
     
-    % Segment T1 to get deformation field
+    % segment T1 to get deformation field
     matlabbatch = {};
     matlabbatch{1}.spm.spatial.preproc.channel.vols = {t1_file};
     matlabbatch{1}.spm.spatial.preproc.channel.biasreg = 0.001;
     matlabbatch{1}.spm.spatial.preproc.channel.biasfwhm = 60;
     matlabbatch{1}.spm.spatial.preproc.channel.write = [0 1];
     
-    % Tissue classes
+    % tissue classes
     tpm_path = fullfile(spm('Dir'), 'tpm', 'TPM.nii');
     for c = 1:6
         matlabbatch{1}.spm.spatial.preproc.tissue(c).tpm = {sprintf('%s,%d', tpm_path, c)};
@@ -787,11 +745,11 @@ function [norm_t1, norm_pet, def_field] = normalize_to_mni(t1_file, pet_file, vo
     
     spm_jobman('run', matlabbatch);
     
-    % Get deformation field
+    % get deformation field
     [pth, name, ~] = fileparts(t1_file);
     def_field = fullfile(pth, ['y_' name '.nii']);
     
-    % Apply normalization to T1 and PET with custom voxel size and bbox
+    % apply normalization to T1 and PET with custom voxel size and bbox
     matlabbatch = {};
     matlabbatch{1}.spm.spatial.normalise.write.subj.def = {def_field};
     matlabbatch{1}.spm.spatial.normalise.write.subj.resample = {t1_file; pet_file};
@@ -809,30 +767,30 @@ function [norm_t1, norm_pet, def_field] = normalize_to_mni(t1_file, pet_file, vo
 end
 
 function [suvr_file, cereb_mean] = calculate_suvr_whole_cerebellum(norm_pet, atlas_path, cereb_rois, out_root, nid)
-    % Calculate SUVR using whole cerebellum as reference
+    % calculate SUVR using whole cerebellum as reference
     
-    % Load images
+    % load images
     V_pet = spm_vol(norm_pet);
     pet_img = spm_read_vols(V_pet);
     
     V_atlas = spm_vol(atlas_path);
     atlas_img = spm_read_vols(V_atlas);
     
-    % Resample atlas if needed
+    % resample atlas if needed
     if ~isequal(size(pet_img), size(atlas_img))
         atlas_img = imresize3(atlas_img, size(pet_img), 'nearest');
     end
     
-    % Extract cerebellum (whole: gray + white)
+    % extract cerebellum (whole: gray + white)
     cereb_mask = ismember(atlas_img, cereb_rois);
     cereb_vals = pet_img(cereb_mask & pet_img > 0);
     cereb_mean = mean(cereb_vals);
     
-    % Calculate SUVR
+    % calculate SUVR
     suvr_img = pet_img / cereb_mean;
     suvr_img(~isfinite(suvr_img)) = 0;
     
-    % Save
+    % save
     V_out = V_pet;
     suvr_file = fullfile(out_root, nid, [nid '_SUVR_WholeCereb.nii']);
     
@@ -846,7 +804,7 @@ function [suvr_file, cereb_mean] = calculate_suvr_whole_cerebellum(norm_pet, atl
 end
 
 function [roi_values, roi_labels] = extract_all_roi_values(suvr_file, atlas_path)
-    % Extract SUVR for all ROIs in atlas
+    % extract SUVR for all ROIs in atlas
     
     V_suvr = spm_vol(suvr_file);
     suvr_img = spm_read_vols(V_suvr);
@@ -854,12 +812,12 @@ function [roi_values, roi_labels] = extract_all_roi_values(suvr_file, atlas_path
     V_atlas = spm_vol(atlas_path);
     atlas_img = spm_read_vols(V_atlas);
     
-    % Resample if needed
+    % resample if needed
     if ~isequal(size(suvr_img), size(atlas_img))
         atlas_img = imresize3(atlas_img, size(suvr_img), 'nearest');
     end
     
-    % Get unique ROIs
+    % get unique ROIs
     unique_rois = unique(atlas_img(:));
     unique_rois = unique_rois(unique_rois > 0);
     
@@ -867,7 +825,7 @@ function [roi_values, roi_labels] = extract_all_roi_values(suvr_file, atlas_path
     roi_values = nan(max_roi, 1);
     roi_labels = cell(max_roi, 1);
     
-    % Extract mean for each ROI
+    % extract mean for each ROI
     for r = unique_rois'
         mask = atlas_img == r;
         vals = suvr_img(mask & suvr_img > 0);
@@ -881,22 +839,22 @@ function [roi_values, roi_labels] = extract_all_roi_values(suvr_file, atlas_path
 end
 
 function save_coreg_qc(t1_file, pet_file, qc_dir, nid)
-    % Save coregistration check image
+    % save coregistration check image
     try
-        % Use SPM's check_reg for visual QC
+        % use SPM's check_reg for visual QC
         spm_check_registration(t1_file, pet_file);
         
-        % Save screenshot
+        % save screenshot
         qc_file = fullfile(qc_dir, sprintf('%s_coreg_check.png', nid));
         saveas(gcf, qc_file);
         close(gcf);
     catch
-        % Silent fail
+        % silent fail
     end
 end
 
 function save_norm_qc(norm_t1, norm_pet, qc_dir, nid)
-    % Save normalization check image
+    % save normalization check image
     try
         spm_check_registration(norm_t1, norm_pet);
         
@@ -904,28 +862,28 @@ function save_norm_qc(norm_t1, norm_pet, qc_dir, nid)
         saveas(gcf, qc_file);
         close(gcf);
     catch
-        % Silent fail
+        % silent fail
     end
 end
 
 function create_suvr_overlay_image(mri_file, suvr_file, qc_dir, nid, cortex_suvr, status)
-    % Create SUVR overlay on MRI with classification
+    % create SUVR overlay on MRI with classification
     try
         figure('Position', [100, 100, 1200, 400]);
         
-        % Load images
+        % load images
         V_mri = spm_vol(mri_file);
         V_suvr = spm_vol(suvr_file);
         
         mri_img = spm_read_vols(V_mri);
         suvr_img = spm_read_vols(V_suvr);
         
-        % Get middle slices
+        % get middle slices
         mid_x = round(size(mri_img, 1) / 2);
         mid_y = round(size(mri_img, 2) / 2);
         mid_z = round(size(mri_img, 3) / 2);
         
-        % Plot 3 views
+        % plot 3 views
         views = {squeeze(mri_img(mid_x, :, :))', squeeze(mri_img(:, mid_y, :))', squeeze(mri_img(:, :, mid_z))};
         suvr_views = {squeeze(suvr_img(mid_x, :, :))', squeeze(suvr_img(:, mid_y, :))', squeeze(suvr_img(:, :, mid_z))};
         titles = {'Sagittal', 'Coronal', 'Axial'};
@@ -937,7 +895,7 @@ function create_suvr_overlay_image(mri_file, suvr_file, qc_dir, nid, cortex_suvr
             axis image off;
             hold on;
             
-            % Overlay SUVR (threshold > 1.0)
+            % overlay SUVR, threshold > 1.0
             suvr_overlay = suvr_views{v};
             suvr_overlay(suvr_overlay < 1.0) = NaN;
             
@@ -949,22 +907,22 @@ function create_suvr_overlay_image(mri_file, suvr_file, qc_dir, nid, cortex_suvr
             title(sprintf('%s - %s', titles{v}, status), 'FontSize', 12, 'FontWeight', 'bold');
         end
         
-        % Add colorbar
+        % add colorbar
         c = colorbar('Position', [0.92, 0.3, 0.02, 0.4]);
         ylabel(c, 'SUVR', 'FontSize', 11);
         
-        % Add text annotation
+        % add text annotation
         annotation('textbox', [0.35, 0.02, 0.3, 0.05], ...
                   'String', sprintf('Cortex SUVR: %.3f (%s)', cortex_suvr, status), ...
                   'FontSize', 14, 'FontWeight', 'bold', ...
                   'HorizontalAlignment', 'center', ...
                   'EdgeColor', 'none');
         
-        % Save
+        % save
         overlay_file = fullfile(qc_dir, sprintf('%s_SUVR_overlay.png', nid));
         saveas(gcf, overlay_file);
         close(gcf);
     catch
-        % Silent fail
+        % silent fail
     end
 end

@@ -1,5 +1,5 @@
 function found = has_ssa_outputs(varargin)
-%HAS_SSA_OUTPUTS True if any expected SSA output exists in the given dirs.
+% true if any expected SSA output exists in the given dirs
 
 found = false;
 for i = 1:nargin

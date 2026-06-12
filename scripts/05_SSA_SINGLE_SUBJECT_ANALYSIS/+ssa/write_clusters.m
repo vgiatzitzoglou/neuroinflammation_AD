@@ -1,5 +1,5 @@
 function has_clusters = write_clusters(spm_mat_or_dir, out_file, p_threshold, extent_threshold, contrast_index, mask_file)
-%WRITE_CLUSTERS Write connected-component labels for thresholded SPM results.
+% write connected-component labels for thresholded SPM results
 
 if nargin < 5 || isempty(contrast_index)
     contrast_index = 1;

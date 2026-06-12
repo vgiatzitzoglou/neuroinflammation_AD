@@ -1,5 +1,5 @@
 function contrast_dir = resolve_contrast_dir(group_dir, subject_id)
-%RESOLVE_CONTRAST_DIR Find a subject contrast folder across naming variants.
+% find a subject contrast folder across naming variants
 
 contrast_dir = fullfile(group_dir, [subject_id 'Contrast']);
 if exist(contrast_dir, 'dir')

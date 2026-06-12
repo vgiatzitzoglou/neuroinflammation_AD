@@ -2,41 +2,33 @@
 % Extracts individual ROIs and grouped tracts/lobes.
 % This one got used for the larger WM/GM table. Check paths first.
 
-%% ========================================================================
-%  CONFIGURATION
-%  ========================================================================
+%  config
 
-% Input paths
+% input paths
 pbr28_root = fullfile(pwd, 'example_data', 'pbr28', 'ALL');
 jhu_atlas = fullfile(pwd, 'atlases', 'JHU-ICBM-labels-1mm.nii');
 hammers_atlas = fullfile(pwd, 'atlases', 'hammers_atlas.img');
 
-% Output
+% output
 output_file = fullfile(pwd, 'outputs', 'PBR28_SUVR_WM_GM_Analysis.xlsx');
 log_file = fullfile(pwd, 'outputs', 'PBR28_Processing_Log.txt');
 
-% Image patterns (try multiple formats)
+% image patterns (try multiple formats)
 % TODO: if file names change, add the new pattern here rather than editing below.
 image_patterns = {
-    'Nor_Cor_*_Realign_PBR28_6090_add_cereb.nii',  % Standard SUVR format
-    'Nor_Cor_*_Realign_PBR28_6090_add_cereb.img',  % Analyze format with cereb
-    'Nor_Cor_*_Realign_PBR28_6090_add.nii',        % Without _cereb suffix
-    'Nor_Cor_*_Realign_PBR28_6090_add.img'         % Analyze format without cereb
+    'Nor_Cor_*_Realign_PBR28_6090_add_cereb.nii',  % usual SUVR format
+    'Nor_Cor_*_Realign_PBR28_6090_add_cereb.img',  % analyze format with cereb
+    'Nor_Cor_*_Realign_PBR28_6090_add.nii',        % without _cereb suffix
+    'Nor_Cor_*_Realign_PBR28_6090_add.img'         % analyze format without cereb
 };
-
-fprintf('=================================================================\n');
 fprintf('PBR28 SUVR extraction\n');
-fprintf('=================================================================\n');
-fprintf('Input:  %s\n', pbr28_root);
-fprintf('Output: %s\n', output_file);
-fprintf('Log:    %s\n', log_file);
-fprintf('=================================================================\n\n');
+fprintf('input:  %s\n', pbr28_root);
+fprintf('output: %s\n', output_file);
+fprintf('log:    %s\n', log_file);
 
-%% ========================================================================
-%  VALIDATE INPUTS
-%  ========================================================================
+%  check inputs
 
-fprintf('Validating inputs...\n');
+fprintf('checking inputs...\n');
 
 assert(exist(pbr28_root, 'dir') ~= 0, 'PBR28 root not found: %s', pbr28_root);
 assert(exist(jhu_atlas, 'file') ~= 0, 'JHU atlas not found: %s', jhu_atlas);
@@ -49,18 +41,16 @@ end
 
 fprintf('  paths seem ok\n\n');
 
-%% ========================================================================
-%  DEFINE TRACT GROUPINGS
-%  ========================================================================
+%  tract groups
 
-fprintf('Defining tract groupings...\n');
+fprintf('defining tract groupings...\n');
 
-% JHU-ICBM-labels-1mm.nii structure:
+% JHU-ICBM-labels-1mm.nii structure
 % ROI 1 = Unclassified (background/CSF)
 % ROI 2-49 = 48 labeled white matter tracts
 
-% Bilateral tract pairs used in my table
-% Format: {Name, ROI_L, ROI_R}
+% bilateral tract pairs used in my table
+% format: {Name, ROI_L, ROI_R}
 bilateral_tracts = {
     'ATR',                           24, 25;  % Anterior thalamic radiation
     'CST',                           8,  9;   % Corticospinal tract
@@ -73,16 +63,16 @@ bilateral_tracts = {
     'PTR',                           30, 31   % Posterior thalamic radiation (optic radiation)
 };
 
-% Midline tracts (single ROI, no L/R)
+% midline tracts (single ROI, no L/R)
 midline_tracts = {
     'Forceps_major',    6;   % Splenium of corpus callosum
     'Forceps_minor',    4    % Genu of corpus callosum
 };
 
-fprintf('  ok Defined 9 bilateral tracts\n');
-fprintf('  ok Defined 2 midline tracts\n');
+fprintf('  ok defined 9 bilateral tracts\n');
+fprintf('  ok defined 2 midline tracts\n');
 
-% Hammers GM lobe groupings (same as before)
+% Hammers GM lobe groupings
 % TODO: double check labels if switching atlas version.
 hammers_lobes = struct();
 hammers_lobes.Frontal = [23, 24, 25, 26, 27, 28, 29, 41, 42, 43, 44, 69, 70, 71, 72];
@@ -92,13 +82,11 @@ hammers_lobes.Occipital = [15, 16, 36, 37];
 hammers_lobes.Cingulate = [38, 39, 40];
 hammers_lobes.Subcortical = [1, 2, 20, 21, 22, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68];
 
-fprintf('  ok Defined 6 GM lobes\n\n');
+fprintf('  ok defined 6 GM lobes\n\n');
 
-%% ========================================================================
-%  FIND ALL SUBJECTS
-%  ========================================================================
+%  find subjects
 
-fprintf('Searching for subjects...\n');
+fprintf('searching for subjects...\n');
 
 subj_dirs = dir(pbr28_root);
 subj_dirs = subj_dirs([subj_dirs.isdir]);
@@ -114,19 +102,17 @@ for i = 1:length(subj_dirs)
     subj_name = subj_dirs(i).name;
     subj_path = fullfile(pbr28_root, subj_name);
     
-    % Skip non-subject folders
+    % skip non-subject folders
     if strcmp(subj_name, 'processed_results') || strcmp(subj_name, 'backup')
         continue;
     end
     
-    % Try multiple image patterns
+    % try multiple image patterns
     img_files = [];
-    pattern_used = '';
     
     for p = 1:length(image_patterns)
         img_files = dir(fullfile(subj_path, image_patterns{p}));
         if ~isempty(img_files)
-            pattern_used = image_patterns{p};
             break;
         end
     end
@@ -138,7 +124,7 @@ for i = 1:length(subj_dirs)
     end
     
     if length(img_files) > 1
-        fprintf('  warning: Multiple images for %s, using: %s\n', subj_name, img_files(1).name);
+        fprintf('  warning: multiple images for %s, using: %s\n', subj_name, img_files(1).name);
     end
     
     img_path = fullfile(subj_path, img_files(1).name);
@@ -151,7 +137,7 @@ for i = 1:length(subj_dirs)
     elseif startsWith(upper(subj_name), 'C')
         group = 'HC';
     else
-        group = 'UNKNOWN';
+        group = 'unknown';
     end
     
     subjects{end+1} = subj_name; %#ok<AGROW>
@@ -162,7 +148,7 @@ end
 n_subjects = length(subjects);
 n_skipped = length(skipped_subjects);
 
-fprintf('  Found %d subjects to process\n', n_subjects);
+fprintf('  found %d subjects to process\n', n_subjects);
 fprintf('    AD:  %d\n', sum(strcmp(groups, 'AD')));
 fprintf('    MCI: %d\n', sum(strcmp(groups, 'MCI')));
 fprintf('    HC:  %d\n', sum(strcmp(groups, 'HC')));
@@ -176,11 +162,9 @@ if n_subjects == 0
     error('No subjects found!');
 end
 
-%% ========================================================================
-%  LOAD ATLASES
-%  ========================================================================
+%  load atlases
 
-fprintf('Loading atlases...\n');
+fprintf('loading atlases...\n');
 
 V_jhu = spm_vol(jhu_atlas);
 jhu_img = spm_read_vols(V_jhu);
@@ -190,15 +174,10 @@ V_hammers = spm_vol(hammers_atlas);
 hammers_img = spm_read_vols(V_hammers);
 fprintf('  ok Hammers atlas: %dx%dx%d\n\n', size(hammers_img, 1), size(hammers_img, 2), size(hammers_img, 3));
 
-%% ========================================================================
-%  EXTRACT VALUES
-%  ========================================================================
+%  extract values
+fprintf('extract roi values\n');
 
-fprintf('=================================================================\n');
-fprintf('EXTRACTING ROI VALUES\n');
-fprintf('=================================================================\n\n');
-
-% Initialize storage
+% initialize storage
 wm_individual = nan(n_subjects, 49);  % All 49 JHU ROIs (including ROI 1 = unclassified)
 gm_individual = nan(n_subjects, 84);  % All 84 Hammers ROIs
 
@@ -209,12 +188,12 @@ for subj_idx = 1:n_subjects
     fprintf('[%d/%d] %s (%s)\n', subj_idx, n_subjects, subjects{subj_idx}, groups{subj_idx});
     
     try
-        % Load PBR28 image
+        % load PBR28 image
         V_pet = spm_vol(file_paths{subj_idx});
         pet_img = spm_read_vols(V_pet);
         pet_dims = size(pet_img);
         
-        % Resample atlases if needed
+        % resample atlases if needed
         if ~isequal(size(jhu_img), pet_dims)
             jhu_resampled = imresize3(jhu_img, pet_dims, 'nearest');
         else
@@ -227,7 +206,7 @@ for subj_idx = 1:n_subjects
             hammers_resampled = hammers_img;
         end
         
-        % Extract WM individual ROIs (1-49)
+        % extract WM individual ROIs (1-49)
         for roi = 1:49
             mask = jhu_resampled == roi;
             vals = pet_img(mask & pet_img > 0 & isfinite(pet_img));
@@ -237,7 +216,7 @@ for subj_idx = 1:n_subjects
             end
         end
         
-        % Extract GM individual ROIs (1-84)
+        % extract GM individual ROIs (1-84)
         for roi = 1:84
             mask = hammers_resampled == roi;
             vals = pet_img(mask & pet_img > 0 & isfinite(pet_img));
@@ -254,7 +233,7 @@ for subj_idx = 1:n_subjects
         fprintf('  ok GM ROIs: %d/84 valid\n', gm_valid);
         
         if wm_valid < 40 || gm_valid < 70
-            fprintf('  warning: Low ROI coverage\n');
+            fprintf('  warning: low ROI coverage\n');
         end
         
     catch ME
@@ -266,13 +245,11 @@ for subj_idx = 1:n_subjects
     fprintf('\n');
 end
 
-%% ========================================================================
-%  CALCULATE BILATERAL TRACTS AND LOBES
-%  ========================================================================
+%  calc tracts and lobes
 
-fprintf('Calculating bilateral tracts and lobes...\n');
+fprintf('calculating bilateral tracts and lobes...\n');
 
-% Bilateral tracts: average L and R
+% bilateral tracts: average L and R
 n_bilateral = size(bilateral_tracts, 1);
 wm_tracts = nan(n_subjects, n_bilateral + length(midline_tracts));
 
@@ -280,18 +257,18 @@ for i = 1:n_bilateral
     roi_l = bilateral_tracts{i, 2};
     roi_r = bilateral_tracts{i, 3};
     
-    % Average left and right
+    % average left and right
     wm_tracts(:, i) = nanmean([wm_individual(:, roi_l), wm_individual(:, roi_r)], 2);
 end
 
-% Midline tracts: single ROI
+% midline tracts: single ROI
 for i = 1:length(midline_tracts)
     roi = midline_tracts{i, 2};
     wm_tracts(:, n_bilateral + i) = wm_individual(:, roi);
 end
 
-fprintf('  ok Calculated %d bilateral tracts\n', n_bilateral);
-fprintf('  ok Calculated %d midline tracts\n', length(midline_tracts));
+fprintf('  ok calculated %d bilateral tracts\n', n_bilateral);
+fprintf('  ok calculated %d midline tracts\n', length(midline_tracts));
 
 % GM lobes
 lobe_names = fieldnames(hammers_lobes);
@@ -301,21 +278,17 @@ for lobe_idx = 1:length(lobe_names)
     lobe_name = lobe_names{lobe_idx};
     lobe_rois = hammers_lobes.(lobe_name);
     
-    % Average all ROIs in this lobe
+    % average all ROIs in this lobe
     gm_lobes(:, lobe_idx) = nanmean(gm_individual(:, lobe_rois), 2);
 end
 
-fprintf('  ok Calculated %d GM lobes\n\n', length(lobe_names));
+fprintf('  ok calculated %d GM lobes\n\n', length(lobe_names));
 
-%% ========================================================================
-%  CREATE OUTPUT TABLES (4 SHEETS)
-%  ========================================================================
+%  make output tables
 
-fprintf('Creating output tables...\n');
+fprintf('creating output tables...\n');
 
-% =========================================================================
-% SHEET 1: WM Individual ROIs (49 columns)
-% =========================================================================
+% sheet 1: WM individual ROIs
 
 wm_ind_table = table();
 wm_ind_table.SubjectID = subjects';
@@ -326,33 +299,29 @@ for roi = 1:49
     wm_ind_table.(col_name) = wm_individual(:, roi);
 end
 
-fprintf('  ok Sheet 1: WM_Individual_ROIs (%d subjects, 49 ROIs)\n', height(wm_ind_table));
+fprintf('  ok sheet 1: WM_Individual_ROIs (%d subjects, 49 ROIs)\n', height(wm_ind_table));
 
-% =========================================================================
-% SHEET 2: WM Tracts (11 columns: 9 bilateral + 2 midline)
-% =========================================================================
+% sheet 2: WM tracts
 
 wm_tract_table = table();
 wm_tract_table.SubjectID = subjects';
 wm_tract_table.Group = groups';
 
-% Add bilateral tracts
+% add bilateral tracts
 for i = 1:n_bilateral
     tract_name = bilateral_tracts{i, 1};
     wm_tract_table.(tract_name) = wm_tracts(:, i);
 end
 
-% Add midline tracts
+% add midline tracts
 for i = 1:length(midline_tracts)
     tract_name = midline_tracts{i, 1};
     wm_tract_table.(tract_name) = wm_tracts(:, n_bilateral + i);
 end
 
-fprintf('  ok Sheet 2: WM_Tracts (%d subjects, 11 tracts)\n', height(wm_tract_table));
+fprintf('  ok sheet 2: WM_Tracts (%d subjects, 11 tracts)\n', height(wm_tract_table));
 
-% =========================================================================
-% SHEET 3: GM Individual ROIs (84 columns)
-% =========================================================================
+% sheet 3: GM individual ROIs
 
 gm_ind_table = table();
 gm_ind_table.SubjectID = subjects';
@@ -363,11 +332,9 @@ for roi = 1:84
     gm_ind_table.(col_name) = gm_individual(:, roi);
 end
 
-fprintf('  ok Sheet 3: GM_Individual_ROIs (%d subjects, 84 ROIs)\n', height(gm_ind_table));
+fprintf('  ok sheet 3: GM_Individual_ROIs (%d subjects, 84 ROIs)\n', height(gm_ind_table));
 
-% =========================================================================
-% SHEET 4: GM Lobes (6 columns)
-% =========================================================================
+% sheet 4: GM lobes
 
 gm_lobe_table = table();
 gm_lobe_table.SubjectID = subjects';
@@ -378,13 +345,11 @@ for lobe_idx = 1:length(lobe_names)
     gm_lobe_table.(lobe_name) = gm_lobes(:, lobe_idx);
 end
 
-fprintf('  ok Sheet 4: GM_Lobes (%d subjects, 6 lobes)\n\n', height(gm_lobe_table));
+fprintf('  ok sheet 4: GM_Lobes (%d subjects, 6 lobes)\n\n', height(gm_lobe_table));
 
-%% ========================================================================
-%  EXPORT TO EXCEL
-%  ========================================================================
+%  export to excel
 
-fprintf('Exporting to Excel...\n');
+fprintf('exporting to Excel...\n');
 
 if exist(output_file, 'file')
     delete(output_file);
@@ -395,33 +360,28 @@ writetable(wm_tract_table, output_file, 'Sheet', '2_WM_Tracts');
 writetable(gm_ind_table, output_file, 'Sheet', '3_GM_Individual_ROIs');
 writetable(gm_lobe_table, output_file, 'Sheet', '4_GM_Lobes');
 
-fprintf('  ok Saved: %s\n\n', output_file);
+fprintf('  ok saved: %s\n\n', output_file);
 
-%% ========================================================================
-%  WRITE PROCESSING LOG
-%  ========================================================================
+%  processing log
 
-fprintf('Writing processing log...\n');
+fprintf('writing processing log...\n');
 
 fid = fopen(log_file, 'w');
-fprintf(fid, '=================================================================\n');
-fprintf(fid, 'PBR28 SUVR EXTRACTION - PROCESSING LOG\n');
-fprintf(fid, '=================================================================\n');
-fprintf(fid, 'Date: %s\n', datestr(now));
-fprintf(fid, 'Input directory: %s\n', pbr28_root);
-fprintf(fid, 'Output file: %s\n', output_file);
-fprintf(fid, '=================================================================\n\n');
+fprintf(fid, 'PBR28 SUVR extraction - processing log\n');
+fprintf(fid, 'date: %s\n', datestr(now));
+fprintf(fid, 'input directory: %s\n', pbr28_root);
+fprintf(fid, 'output file: %s\n', output_file);
 
-fprintf(fid, 'SUMMARY\n');
-fprintf(fid, '  Successfully processed: %d subjects\n', n_subjects);
+fprintf(fid, 'summary\n');
+fprintf(fid, '  successfully processed: %d subjects\n', n_subjects);
 fprintf(fid, '    AD:  %d\n', sum(strcmp(groups, 'AD')));
 fprintf(fid, '    MCI: %d\n', sum(strcmp(groups, 'MCI')));
 fprintf(fid, '    HC:  %d\n', sum(strcmp(groups, 'HC')));
-fprintf(fid, '  Skipped: %d subjects\n', n_skipped);
-fprintf(fid, '  Failed during processing: %d subjects\n\n', length(failed_subjects));
+fprintf(fid, '  skipped: %d subjects\n', n_skipped);
+fprintf(fid, '  failed during processing: %d subjects\n\n', length(failed_subjects));
 
 if n_skipped > 0
-    fprintf(fid, 'SKIPPED SUBJECTS (no image found):\n');
+    fprintf(fid, 'skipped subjects (no image found):\n');
     fprintf(fid, '-----------------------------------------------------------\n');
     for i = 1:n_skipped
         fprintf(fid, '  %s: %s\n', skipped_subjects{i}, skip_reasons{i});
@@ -430,7 +390,7 @@ if n_skipped > 0
 end
 
 if ~isempty(failed_subjects)
-    fprintf(fid, 'FAILED SUBJECTS (processing error):\n');
+    fprintf(fid, 'failed subjects (processing error):\n');
     fprintf(fid, '-----------------------------------------------------------\n');
     for i = 1:length(failed_subjects)
         fprintf(fid, '  %s: %s\n', failed_subjects{i}, fail_reasons{i});
@@ -438,9 +398,9 @@ if ~isempty(failed_subjects)
     fprintf(fid, '\n');
 end
 
-fprintf(fid, 'TRACT DEFINITIONS:\n');
+fprintf(fid, 'tract definitions:\n');
 fprintf(fid, '-----------------------------------------------------------\n');
-fprintf(fid, 'Bilateral tracts (average of L and R):\n');
+fprintf(fid, 'bilateral tracts (average of L and R):\n');
 for i = 1:n_bilateral
     fprintf(fid, '  %s: ROI %d (L) + ROI %d (R)\n', ...
         bilateral_tracts{i, 1}, bilateral_tracts{i, 2}, bilateral_tracts{i, 3});
@@ -452,17 +412,12 @@ end
 
 fclose(fid);
 
-fprintf('  ok Log saved: %s\n\n', log_file);
+fprintf('  ok log saved: %s\n\n', log_file);
 
-%% ========================================================================
-%  SUMMARY STATISTICS
-%  ========================================================================
+%  summary stats
+fprintf('summary stats\n');
 
-fprintf('=================================================================\n');
-fprintf('SUMMARY STATISTICS\n');
-fprintf('=================================================================\n\n');
-
-fprintf('WHITE MATTER TRACTS (mean SUVR):\n');
+fprintf('white matter tracts (mean SUVR):\n');
 fprintf('-----------------------------------------------------------\n');
 for g = {'AD', 'MCI', 'HC'}
     group_name = g{1};
@@ -477,7 +432,7 @@ for g = {'AD', 'MCI', 'HC'}
     fprintf('  %s (N=%d): %.3f +/- %.3f\n', group_name, n_group, mean_suvr, std_suvr);
 end
 
-fprintf('\nGRAY MATTER LOBES (mean SUVR):\n');
+fprintf('\ngray matter lobes (mean SUVR):\n');
 fprintf('-----------------------------------------------------------\n');
 for g = {'AD', 'MCI', 'HC'}
     group_name = g{1};
@@ -491,10 +446,6 @@ for g = {'AD', 'MCI', 'HC'}
     
     fprintf('  %s (N=%d): %.3f +/- %.3f\n', group_name, n_group, mean_suvr, std_suvr);
 end
-
-fprintf('\n=================================================================\n');
 fprintf('done\n');
-fprintf('=================================================================\n');
 fprintf('Excel output: %s\n', output_file);
-fprintf('Processing log: %s\n', log_file);
-fprintf('=================================================================\n');
+fprintf('processing log: %s\n', log_file);

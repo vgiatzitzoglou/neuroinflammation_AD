@@ -1,5 +1,5 @@
 function ran_model = run_two_sample_model(out_dir, control_scans, target_scan, mask_file, cfg)
-%RUN_TWO_SAMPLE_MODEL Build and estimate the SSA two-sample SPM model.
+% build and estimate the SSA two-sample SPM model
 
 spm_file = fullfile(out_dir, 'SPM.mat');
 if exist(spm_file, 'file') && ~cfg.overwrite_models

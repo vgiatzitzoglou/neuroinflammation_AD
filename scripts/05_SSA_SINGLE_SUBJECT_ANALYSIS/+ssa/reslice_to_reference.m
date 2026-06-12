@@ -1,5 +1,5 @@
 function out_file = reslice_to_reference(source_img, ref_img)
-%RESLICE_TO_REFERENCE Reslice source_img if geometry differs from ref_img.
+% reslice source_img if geometry differs from ref_img
 
 out_file = source_img;
 src = spm_vol(source_img);

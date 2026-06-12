@@ -1,5 +1,5 @@
 function subjects = list_subject_dirs(group_dir)
-%LIST_SUBJECT_DIRS Return subject directories, excluding hidden and output dirs.
+% subject directories, excluding hidden and output dirs
 
 if ~exist(group_dir, 'dir')
     subjects = struct('name', {}, 'folder', {}, 'date', {}, 'bytes', {}, 'isdir', {}, 'datenum', {});

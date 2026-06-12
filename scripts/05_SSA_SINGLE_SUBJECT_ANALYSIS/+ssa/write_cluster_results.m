@@ -1,5 +1,5 @@
 function write_cluster_results(cluster_file, pet_img, out_file)
-%WRITE_CLUSTER_RESULTS Sample PET values for each labelled cluster.
+% sample PET values for each labelled cluster
 
 cluster_vol = spm_vol(cluster_file);
 clusters = spm_read_vols(cluster_vol);

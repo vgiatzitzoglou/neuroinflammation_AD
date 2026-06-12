@@ -1,29 +1,25 @@
-%% CREATE DISEASE FREQUENCY MAP (HEATMAP)
-% This script sums up the binary cluster maps from all subjects in a group
-% to create a "Frequency Map" showing the most common locations of disease.
-%
-% OUTPUT: ./outputs/results\Group_Frequency_Map.nii
-% (Voxel Intensity = Number of subjects with a significant cluster at that spot)
+%% disease frequency map
+% sums binary cluster maps across a group
 
 clear; clc;
 script_dir = fileparts(mfilename('fullpath'));
 addpath(script_dir);
 spm('Defaults', 'PET');
 
-%% ==== CONFIGURATION ====
+%% config
 cfg = ssa.default_config();
-target_group = 'MCI';  % Change to 'MCI' for the other group
+target_group = 'MCI';  % change to AD for the other group
 results_root = cfg.results_root;
 output_filename = fullfile(results_root, [target_group '_Frequency_Map.nii']);
 
-%% ==== MAIN PROCESSING ====
-fprintf('Generating Frequency Map for Group: %s\n', target_group);
+%% main bit
+fprintf('generating frequency map for group: %s\n', target_group);
 
-% Find all subjects in the results folder
+% find all subjects in the results folder
 d = dir(results_root);
 d = d([d.isdir] & ~startsWith({d.name}, '.'));
 
-% Filter for the target group (e.g., starts with AD)
+% filter for the target group
 is_target = startsWith({d.name}, target_group, 'IgnoreCase', true);
 subjects = d(is_target);
 
@@ -31,9 +27,9 @@ if isempty(subjects)
     error('No subjects found starting with "%s" in %s', target_group, results_root);
 end
 
-fprintf('Found %d subjects. Stacking maps...\n', length(subjects));
+fprintf('found %d subjects. stacking maps...\n', length(subjects));
 
-% Initialize variables
+% initialize variables
 sum_vol = [];
 ref_header = [];
 count = 0;
@@ -43,52 +39,52 @@ for i = 1:length(subjects)
     clusterFile = fullfile(results_root, subjID, 'Clusters.nii');
     
     if ~exist(clusterFile, 'file')
-        fprintf('  [SKIP] %s (No Clusters.nii found)\n', subjID);
+        fprintf('  skip: %s no Clusters.nii\n', subjID);
         continue;
     end
     
-    % Load Cluster Map
+    % load cluster map
     V = spm_vol(clusterFile);
     img = spm_read_vols(V);
     
-    % Binarize (Any cluster ID becomes 1)
+    % binarize, any cluster ID becomes 1
     binary_img = (img > 0);
     
-    % Initialize sum volume on first valid subject
+    % initialize sum volume on first valid subject
     if isempty(sum_vol)
         sum_vol = zeros(size(binary_img));
-        ref_header = V; % Keep header for saving later
+        ref_header = V; % keep header for saving later
     end
     
-    % Check dimensions
+    % check dimensions
     if ~isequal(size(binary_img), size(sum_vol))
-        fprintf('  [ERROR] Dimension mismatch for %s. Skipping.\n', subjID);
+        fprintf('  error: dimension mismatch for %s, skipping\n', subjID);
         continue;
     end
     
-    % Add to total
+    % add to total
     sum_vol = sum_vol + double(binary_img);
     count = count + 1;
-    fprintf('  [ADDED] %s\n', subjID);
+    fprintf('  added %s\n', subjID);
 end
 
 if count == 0
     error('No valid cluster maps were processed.');
 end
 
-%% ==== SAVE RESULT ====
-fprintf('\nWriting Frequency Map...\n');
+%% save result
+fprintf('\nwriting frequency map...\n');
 
-% Update Header
+% update header
 V_out = ref_header;
 V_out.fname = output_filename;
-V_out.dt = [16 0]; % Float32
-V_out.descrip = sprintf('Frequency Map (N=%d) - %s', count, target_group);
+V_out.dt = [16 0]; % float32
+V_out.descrip = sprintf('frequency map (N=%d) - %s', count, target_group);
 
-% Write Volume
+% write volume
 spm_write_vol(V_out, sum_vol);
 
 fprintf('------------------------------------------------\n');
-fprintf('SUCCESS! Map saved to:\n%s\n', output_filename);
-fprintf('Max Overlap: %d subjects (at the "hottest" spot)\n', max(sum_vol(:)));
+fprintf('done, map saved to:\n%s\n', output_filename);
+fprintf('max overlap: %d subjects\n', max(sum_vol(:)));
 fprintf('------------------------------------------------\n');

@@ -1,6 +1,6 @@
 function subjects = default_subjects()
-%DEFAULT_SUBJECTS Subject IDs I keep reusing in the batch scripts.
-% Public repo note: these are labels only, not a subject table.
+% subject IDs I keep reusing in the batch scripts
+% these are labels only, not a subject table
 
 subjects = { ...
     'AD014', 'AD018', 'AD023', 'AD024', 'AD027', 'AD029', 'AD030', ...

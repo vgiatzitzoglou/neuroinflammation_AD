@@ -1,44 +1,42 @@
 #!/bin/bash
 
-ATLAS="$FSLDIR/data/atlases/JHU/JHU-ICBM-labels-1mm.nii.gz"
-LABELS=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44)  # es. ROI: https://neurovault.org/images/1401/
-OUTPUT="DTI_ROI_results.csv"
+# JHU ROI extraction for dtifit maps. Run from the folder with subject dirs.
+# TODO: check label list if using a different JHU atlas file.
+atlas="$FSLDIR/data/atlases/JHU/JHU-ICBM-labels-1mm.nii.gz"
+labels=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44)
+output="DTI_ROI_results.csv"
 
-echo "Subject,ROI,FA,MD,AD,RD" > $OUTPUT
+echo "Subject,ROI,FA,MD,AD,RD" > "$output"
 
-for SUBJ in CIF*; do
-    [ ! -d "$SUBJ" ] && continue
-    ID=$(basename $SUBJ)
+for subj in CIF*; do
+    [ ! -d "$subj" ] && continue
+    id=$(basename "$subj")
 
-    FA="$SUBJ/FA.nii.gz"
-    MD="$SUBJ/MD.nii.gz"
-    AD="$SUBJ/L1.nii.gz"
-    RD="$SUBJ/RD.nii.gz"
+    fa="$subj/FA.nii.gz"
+    md="$subj/MD.nii.gz"
+    ad="$subj/L1.nii.gz"
+    rd="$subj/RD.nii.gz"
 
-    # FA to MNI Registration and reversed warp
-    flirt -in "$FA" -ref $FSLDIR/data/standard/FMRIB58_FA_1mm -omat "$SUBJ/FA2MNI.mat"
-    fnirt --in="$FA" --aff="$SUBJ/FA2MNI.mat" \
-          --cout="$SUBJ/FA2MNI_warp" \
+    # FA to MNI, then invert back so atlas ROIs land in subject space.
+    flirt -in "$fa" -ref "$FSLDIR/data/standard/FMRIB58_FA_1mm" -omat "$subj/FA2MNI.mat"
+    fnirt --in="$fa" --aff="$subj/FA2MNI.mat" \
+          --cout="$subj/FA2MNI_warp" \
           --config=FA_2_FMRIB58_1mm.cnf
 
-    # Invert warp (MNI to DWI)
-    invwarp -w "$SUBJ/FA2MNI_warp" -o "$SUBJ/MNI2FA_warp" -r "$FA"
+    invwarp -w "$subj/FA2MNI_warp" -o "$subj/MNI2FA_warp" -r "$fa"
 
-    for ROI in "${LABELS[@]}"; do
-        # binary mask of the chosen ROI
-        fslmaths $ATLAS -thr $ROI -uthr $ROI -bin "$SUBJ/ROI_${ROI}_MNI.nii.gz"
+    for roi in "${labels[@]}"; do
+        fslmaths "$atlas" -thr "$roi" -uthr "$roi" -bin "$subj/ROI_${roi}_MNI.nii.gz"
 
-        #ROI into FA space of the subject
-        applywarp -i "$SUBJ/ROI_${ROI}_MNI.nii.gz" \
-                  -r "$FA" -w "$SUBJ/MNI2FA_warp" \
-                  -o "$SUBJ/ROI_${ROI}_FA.nii.gz"
+        applywarp -i "$subj/ROI_${roi}_MNI.nii.gz" \
+                  -r "$fa" -w "$subj/MNI2FA_warp" \
+                  -o "$subj/ROI_${roi}_FA.nii.gz"
 
-        #Extract metrics
-        FA_M=$(fslstats $FA -k "$SUBJ/ROI_${ROI}_FA.nii.gz" -M)
-        MD_M=$(fslstats $MD -k "$SUBJ/ROI_${ROI}_FA.nii.gz" -M)
-        AD_M=$(fslstats $AD -k "$SUBJ/ROI_${ROI}_FA.nii.gz" -M)
-        RD_M=$(fslstats $RD -k "$SUBJ/ROI_${ROI}_FA.nii.gz" -M)
+        fa_m=$(fslstats "$fa" -k "$subj/ROI_${roi}_FA.nii.gz" -M)
+        md_m=$(fslstats "$md" -k "$subj/ROI_${roi}_FA.nii.gz" -M)
+        ad_m=$(fslstats "$ad" -k "$subj/ROI_${roi}_FA.nii.gz" -M)
+        rd_m=$(fslstats "$rd" -k "$subj/ROI_${roi}_FA.nii.gz" -M)
 
-        echo "$ID,$ROI,$FA_M,$MD_M,$AD_M,$RD_M" >> $OUTPUT
+        echo "$id,$roi,$fa_m,$md_m,$ad_m,$rd_m" >> "$output"
     done
 done

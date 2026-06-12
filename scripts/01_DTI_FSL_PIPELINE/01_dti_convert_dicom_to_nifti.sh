@@ -17,14 +17,14 @@ for cif_folder in C*; do
         dicom_folder="$subfolder/DICOM/"
 
         if [ -d "$dicom_folder" ]; then
-            echo "Found DICOM folder: $dicom_folder"
+            echo "found DICOM folder: $dicom_folder"
             
            
             dcm2niix -f "$cif_name" -o "$cif_folder" -z y "$dicom_folder"
 
             echo "DICOM folder converted: $dicom_folder"
         else
-            echo "DICOM folder NOT FOUND at expected path: $dicom_folder"
+            echo "DICOM folder not found at expected path: $dicom_folder"
         fi
     done
 done

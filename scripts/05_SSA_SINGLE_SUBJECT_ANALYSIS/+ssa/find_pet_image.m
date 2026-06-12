@@ -1,5 +1,5 @@
 function pet_file = find_pet_image(subject_dir, pet_patterns)
-%FIND_PET_IMAGE Find the first likely PET image in a subject folder.
+% first likely PET image in a subject folder
 
 pet_file = '';
 for k = 1:numel(pet_patterns)

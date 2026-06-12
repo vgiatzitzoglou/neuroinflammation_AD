@@ -1,5 +1,5 @@
 function out_file = rescale_to_target_mean(source_img, target_mean, mask_file)
-%RESCALE_TO_TARGET_MEAN Rescale low-intensity PET images using a brain mask.
+% rescale low-intensity PET images using a brain mask
 
 out_file = source_img;
 pet_vol = spm_vol(source_img);

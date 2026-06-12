@@ -1,6 +1,6 @@
 function cfg = default_config()
-%DEFAULT_CONFIG Rough defaults for the SSA scripts.
-% Change these locally. I kept the paths generic for GitHub.
+% rough defaults for the SSA scripts
+% change these locally. I kept the paths generic for GitHub.
 % TODO if rerunning: check target_mean, p threshold, and extent threshold.
 
 root_dir = fullfile(pwd, 'example_data', 'pet_subjects');

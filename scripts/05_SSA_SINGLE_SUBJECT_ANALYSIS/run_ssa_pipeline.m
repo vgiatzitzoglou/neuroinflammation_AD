@@ -10,7 +10,7 @@ addpath(script_dir);
 
 cfg = ssa.default_config();
 
-% Edit these for a local run if needed.
+% edit these for a local run if needed
 % cfg.root_dir = fullfile(pwd, 'example_data', 'pet_subjects');
 % cfg.target_groups = {'AD', 'MCI', 'HC'};
 % cfg.include_remaining_controls = true;
@@ -22,7 +22,7 @@ spm_jobman('initcfg');
 cfg.mask_file = ssa.prepare_mask(cfg.mask_file);
 [~, control_scans, ref_img_path, reference_ids] = ssa.select_normative_controls(cfg);
 
-fprintf('\nRunning SSA target groups...\n');
+fprintf('\nrunning SSA target groups...\n');
 processed = 0;
 skipped = 0;
 
@@ -32,7 +32,7 @@ for g = 1:numel(cfg.target_groups)
     subject_dirs = ssa.list_subject_dirs(group_dir);
 
     if isempty(subject_dirs)
-        fprintf('  [SKIP] %s: no subject folders found\n', group_name);
+        fprintf('  skip: %s has no subject folders\n', group_name);
         continue;
     end
 
@@ -48,13 +48,13 @@ for g = 1:numel(cfg.target_groups)
         subject_dir = fullfile(group_dir, subject_id);
         pet_file = ssa.find_pet_image(subject_dir, cfg.pet_patterns);
         if isempty(pet_file)
-            fprintf('  [SKIP] %s/%s: no PET image found\n', group_name, subject_id);
+            fprintf('  skip: %s/%s no PET image found\n', group_name, subject_id);
             skipped = skipped + 1;
             continue;
         end
 
         out_dir = fullfile(group_dir, [subject_id 'Contrast']);
-        fprintf('\n=== %s/%s ===\n', group_name, subject_id);
+        fprintf('\n%s/%s\n', group_name, subject_id);
 
         try
             final_pet = ssa.reslice_to_reference(pet_file, ref_img_path);
@@ -69,9 +69,9 @@ for g = 1:numel(cfg.target_groups)
             processed = processed + 1;
         catch ME
             skipped = skipped + 1;
-            fprintf('  [FAIL] %s/%s: %s\n', group_name, subject_id, ME.message);
+            fprintf('  fail: %s/%s: %s\n', group_name, subject_id, ME.message);
         end
     end
 end
 
-fprintf('\nSSA done. Processed: %d. Skipped/failed: %d.\n', processed, skipped);
+fprintf('\nSSA done. processed: %d. skipped/failed: %d.\n', processed, skipped);
