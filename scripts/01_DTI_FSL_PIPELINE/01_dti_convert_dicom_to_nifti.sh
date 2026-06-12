@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. loop through C* subject folders
+# 2. look for the DTI DICOM folder
+# 3. convert with dcm2niix into the subject folder
+
 for cif_folder in C*; do
    
     if [ ! -d "$cif_folder" ]; then

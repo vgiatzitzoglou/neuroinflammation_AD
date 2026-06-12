@@ -1,6 +1,14 @@
 % Flutemetamol amyloid SUVR script
 % DICOM -> SUVR values/table. This is still quite path-dependent, so check the
 % folders and atlas before running.
+%
+% steps:
+% 1. read subject IDs from the spreadsheet
+% 2. find PET DICOM and T1 files
+% 3. convert/average PET frames
+% 4. coregister PET to T1 and normalize to MNI
+% 5. divide by whole cerebellum reference
+% 6. extract ROI values and write summary/QC tables
 
 %  config
 

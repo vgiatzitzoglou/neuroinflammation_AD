@@ -1,5 +1,11 @@
 %% disease frequency map
 % sums binary cluster maps across a group
+%
+% steps:
+% 1. choose group
+% 2. load each subject's Clusters.nii
+% 3. binarize and sum maps
+% 4. save group frequency map
 
 clear; clc;
 script_dir = fileparts(mfilename('fullpath'));

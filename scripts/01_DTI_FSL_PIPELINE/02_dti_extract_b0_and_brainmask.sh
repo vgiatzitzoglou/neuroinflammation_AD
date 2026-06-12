@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. loop through DTI subject folders
+# 2. take the first b0 volume with fslroi
+# 3. run BET to make the brain mask for eddy/dtifit
+
 # loop through subject folders under DTI_DATA_ROOT
 DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
 

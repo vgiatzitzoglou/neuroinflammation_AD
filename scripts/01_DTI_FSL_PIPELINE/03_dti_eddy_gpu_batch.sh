@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. loop through subject folders
+# 2. check DWI, mask, bvec/bval, acqparams, index
+# 3. run eddy_cuda if outputs are not already there
+
 # config
 main_dir="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
 subject_pattern="${DTI_SUBJECT_PATTERN:-*}"

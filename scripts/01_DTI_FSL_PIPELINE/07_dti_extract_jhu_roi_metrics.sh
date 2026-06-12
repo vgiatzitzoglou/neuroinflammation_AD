@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. put FA into MNI/JHU space and invert warp back
+# 2. make one mask per JHU label
+# 3. extract FA/MD/AD/RD means into a CSV
+
 # JHU ROI extraction for dtifit maps. Run from the folder with subject dirs.
 # TODO: check label list if using a different JHU atlas file.
 atlas="$FSLDIR/data/atlases/JHU/JHU-ICBM-labels-1mm.nii.gz"

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. loop through dtifit subject folders
+# 2. copy L1 as AD/AxD
+# 3. average L2 and L3 for RD
+
 # Folder with subject folders. Can override with DTI_DATA_ROOT.
 input_dir="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
 

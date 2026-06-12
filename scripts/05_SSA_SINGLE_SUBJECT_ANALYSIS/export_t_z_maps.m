@@ -1,5 +1,11 @@
 %% export T and Z maps
 % copies existing SPM T maps and makes Z maps
+%
+% steps:
+% 1. find subject contrast folders
+% 2. copy spmT_0001.nii to output
+% 3. convert T values to Z values
+% 4. write Tmap.nii and Zmap.nii
 
 clear; clc;
 script_dir = fileparts(mfilename('fullpath'));

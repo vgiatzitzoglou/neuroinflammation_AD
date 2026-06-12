@@ -11,6 +11,12 @@ function ssa_batch(subjects, out_root)
 %
 % NOTE: this expects SPM.mat to already exist. It is mostly a convenience
 % wrapper so I do not keep copying the same cluster code.
+%
+% steps:
+% 1. load subject list or subject table
+% 2. threshold the existing SPM result
+% 3. write labelled cluster map
+% 4. sample PET values inside each cluster
 
 if nargin == 0
     fprintf(['Usage:\n', ...

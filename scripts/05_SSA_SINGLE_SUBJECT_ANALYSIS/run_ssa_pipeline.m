@@ -2,6 +2,13 @@
 % This is the SSA script I would start from now.
 % The older versions had the same bits copied around, so the boring repeated
 % parts are in +ssa. Still check paths/thresholds before running.
+%
+% steps:
+% 1. load config and prepare mask
+% 2. pick the low-mean control reference set
+% 3. loop through target subjects
+% 4. reslice/rescale PET if needed
+% 5. run subject-vs-control SPM model and write clusters
 
 clear; clc;
 

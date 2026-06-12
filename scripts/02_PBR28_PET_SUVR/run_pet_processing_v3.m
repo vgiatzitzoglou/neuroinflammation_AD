@@ -2,6 +2,13 @@ function run_pet_processing_v3()
     % PBR28 SUVR processing.
     % Needs the SPM segmentation/deformation files already beside the T1.
     % TODO: check whether the _2 suffix is still needed before rerunning.
+    %
+    % steps:
+    % 1. find T1/PET and existing SPM segmentation files
+    % 2. coregister PET to T1
+    % 3. bring cerebellum atlas labels into native space
+    % 4. make cerebellar WM reference mask
+    % 5. create native SUVR, warp to MNI, smooth
 
     fprintf('starting PBR28 SUVR batch\n');
 

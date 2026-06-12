@@ -1,6 +1,13 @@
 % PBR28 SUVR extraction
 % Extracts individual ROIs and grouped tracts/lobes.
 % This one got used for the larger WM/GM table. Check paths first.
+%
+% steps:
+% 1. find PBR28 SUVR images
+% 2. load JHU and Hammers atlases
+% 3. extract individual WM/GM ROI means
+% 4. average ROIs into tracts/lobes
+% 5. write Excel table and processing log
 
 %  config
 

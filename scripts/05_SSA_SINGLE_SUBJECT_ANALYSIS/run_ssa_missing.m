@@ -2,6 +2,11 @@
 % Scans ./example_data/pet_subjects and calls ssa_batch only where
 % SPM.mat exists but cluster/result outputs are missing.
 % Useful after a half-finished SSA run.
+%
+% steps:
+% 1. scan subject folders for contrast/SPM.mat
+% 2. skip subjects that already have SSA outputs
+% 3. send missing subjects to ssa_batch
 
 clear; clc;
 

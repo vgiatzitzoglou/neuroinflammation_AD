@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# steps:
+# 1. loop through subject folders
+# 2. find eddy output, brain mask, bvec and bval
+# 3. run dtifit to make FA/MD/eigenvalue maps
+
 DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
 
 for cif_folder in "$DTI_DATA_ROOT"/*/
