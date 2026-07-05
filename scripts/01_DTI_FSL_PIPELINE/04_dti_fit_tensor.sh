@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# steps:
+# 1. loop through subject folders
+# 2. find eddy output, brain mask, bvec and bval
+# 3. run dtifit to make FA/MD/eigenvalue maps
+
+DTI_DATA_ROOT="${DTI_DATA_ROOT:-./example_data/dti_subjects}"
+
+for cif_folder in "$DTI_DATA_ROOT"/*/
+    do
+
+    mask=$(find "$cif_folder" -maxdepth 1 -name "*_brain_mask.nii.gz")
+    eddy_unwarped=$(find "$cif_folder" -maxdepth 1 -name "*_eddy_unwarped.nii.gz")
+    bvec_file=$(find "$cif_folder" -maxdepth 1 -name "*.bvec")
+    bval_file=$(find "$cif_folder" -maxdepth 1 -name "*.bval")
+    cif_name=$(basename "${cif_folder%/}")
+
+    if [ -f "$mask" ] && [ -f "$eddy_unwarped" ] && [ -f "$bvec_file" ] && [ -f "$bval_file" ]
+    then
+    
+    echo "$eddy_unwarped found"
+    dtifit --data="$eddy_unwarped" --mask="$mask" --bvecs="$bvec_file" --bvals="$bval_file" --out="$cif_folder/${cif_name}_DTI"
+
+    else
+
+    echo "missing file(s), dtifit not run for $cif_folder"
+    fi
+
+done

@@ -1,0 +1,45 @@
+# macOS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# MATLAB generated files and local state
+*.asv
+*.fig
+*.mlx
+
+# Neuroimaging data
+*.dcm
+*.ima
+*.nii
+*.nii.gz
+*.img
+*.hdr
+*.mgh
+*.mgz
+*.bval
+*.bvec
+
+# Analysis data and results
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.sav
+*.spv
+*.mat
+*.ps
+
+# Logs and generated outputs
+*.log
+*_results/
+outputs/
+results/
+processed/
+nifti/
+DICOM/
+
+# Keep known non-sensitive FSL sidecar templates
+!scripts/01_DTI_FSL_PIPELINE/fsl_acqparams.txt
+!scripts/01_DTI_FSL_PIPELINE/fsl_index.txt
